@@ -1,0 +1,8 @@
+[profile.release]
+panic = "abort"
+lto = true
+
+[workspace]
+members = [
+  "crates/service",
+]
