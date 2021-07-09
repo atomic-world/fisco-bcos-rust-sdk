@@ -30,14 +30,16 @@ impl ServiceTrait for RPCService {
         let response = client.request(request).await?;
         let response_body = hyper::body::to_bytes(response.into_body()).await?;
         let data: Value = serde_json::from_slice(&response_body.to_vec())?;
+        let result = &data["result"];
         let error = &data["error"];
-        if error.is_null() {
-            Ok(data)
-        } else {
-            Err(ServiceError::FiscoBcosError {
-                code: error["code"].as_i64().unwrap(),
-                message: error["message"].to_string(),
-            })
+        match error.is_null() {
+            true => Ok(result.clone()),
+            false => {
+                Err(ServiceError::FiscoBcosError {
+                    code: error["code"].as_i64().unwrap(),
+                    message: error["message"].to_string(),
+                })
+            }
         }
     }
 }
