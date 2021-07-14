@@ -7,13 +7,15 @@ use crate::service_trait::ServiceTrait;
 use crate::service_error::ServiceError;
 
 pub struct RPCService {
-  node: String,
+  host: String,
+  port: i32,
 }
 
 impl RPCService {
-    pub fn new(node: &str) -> RPCService {
+    pub fn new(node: &str, port: i32) -> RPCService {
         RPCService {
-            node: node.to_owned(),
+            host: node.to_owned(),
+            port: port,
         }
     }
 }
@@ -24,7 +26,7 @@ impl ServiceTrait for RPCService {
         let request_body = serde_json::to_string(&params)?;
         let request = Request::builder()
             .method(Method::POST)
-            .uri(&self.node)
+            .uri(format!("http://{}:{}", self.host, self.port))
             .body(Body::from(request_body))?;
         let client = Client::new();
         let response = client.request(request).await?;

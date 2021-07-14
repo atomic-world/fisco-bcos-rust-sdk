@@ -2,7 +2,7 @@ use fisco_bcos_service::{ServiceTrait, RPCService};
 
 #[tokio::main]
 async fn main() {
-    let rpc_service = RPCService::new("http://127.0.0.1:8545");
+    let rpc_service = RPCService::new("127.0.0.1", 8545);
 
     let client_version = rpc_service.get_client_version(1).await.unwrap();
     println!("Client Version: {}", client_version);
