@@ -58,14 +58,23 @@ impl ServiceTrait for ChannelService {
         let mut ssl_stream = SslStream::new(ssl, tcp_stream)?;
         ssl_stream.connect()?;
 
-        let channel_message = pack_channel_message(&serde_json::to_vec(&params)?);
-        ssl_stream.write_all(&channel_message)?;
+        let request_data = pack_channel_message(&serde_json::to_vec(&params)?);
+        ssl_stream.write(&request_data)?;
 
-        let mut response = vec![];
-        ssl_stream.read_to_end(&mut response)?;
-        let data: Value = serde_json::from_slice(&Vec::from(&response[42..]))?;
-        let result = &data["result"];
-        let error = &data["error"];
+        let mut buffer_size = 0;
+        let mut buffer:Vec<u8> = Vec::new();
+        'outer: loop {
+            let start_index = buffer.len();
+            buffer.append(&mut vec![0; 256]);
+            let read_size = ssl_stream.read(&mut buffer[start_index..])?;
+            buffer_size += read_size;
+            if read_size == 0 || read_size < 256 {
+                break 'outer;
+            }
+        }
+        let response: Value = serde_json::from_slice(&buffer[42..buffer_size - 1])?;
+        let result = &response["result"];
+        let error = &response["error"];
         match error.is_null() {
             true => Ok(result.clone()),
             false => {

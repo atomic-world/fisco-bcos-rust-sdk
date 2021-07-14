@@ -20,6 +20,9 @@ pub enum ServiceError {
     #[error("openssl::error::ErrorStack")]
     OpenSSLErrorStack(#[from] openssl::error::ErrorStack),
 
+    #[error("std::string::FromUtf8Error")]
+    StringFromUtf8Error(#[from] std::string::FromUtf8Error),
+
     #[error("fisco bcos service error")]
     FiscoBcosError {
         code: i64,
