@@ -2,6 +2,9 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ServiceError {
+    #[error("std::io::Error")]
+    StdIOError(#[from] std::io::Error),
+
     #[error("hyper::Error")]
     HyperError(#[from] hyper::Error),
 
@@ -10,6 +13,12 @@ pub enum ServiceError {
 
     #[error("serde_json::Error")]
     SerdeJsonError(#[from] serde_json::Error),
+
+    #[error("openssl::ssl::Error")]
+    OpenSSLError(#[from] openssl::ssl::Error),
+
+    #[error("openssl::error::ErrorStack")]
+    OpenSSLErrorStack(#[from] openssl::error::ErrorStack),
 
     #[error("fisco bcos service error")]
     FiscoBcosError {
