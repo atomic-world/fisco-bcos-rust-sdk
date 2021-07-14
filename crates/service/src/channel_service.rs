@@ -1,12 +1,10 @@
 use uuid::Uuid;
-use std::pin::Pin;
 use std::path::Path;
 use async_trait::async_trait;
 use serde_json::Value;
-use tokio_openssl::SslStream;
-use tokio::net::TcpStream;
-use tokio::io::{AsyncWriteExt, AsyncReadExt};
-use openssl::ssl::{SslMethod, SslVerifyMode, SslFiletype, SslConnector};
+use std::net::TcpStream;
+use std::io::{Write, Read};
+use openssl::ssl::{SslMethod, SslVerifyMode, SslFiletype, SslConnector, SslStream};
 
 use crate::service_trait::ServiceTrait;
 use crate::service_error::ServiceError;
@@ -56,15 +54,15 @@ impl ServiceTrait for ChannelService {
         ssl_builder.set_private_key_file(&Path::new(&self.key_file), SslFiletype::PEM)?;
 
         let ssl = ssl_builder.build().configure()?.into_ssl(&self.host)?;
-        let tcp_stream = TcpStream::connect(format!("{}:{}", self.host, self.port)).await?;
+        let tcp_stream = TcpStream::connect(format!("{}:{}", self.host, self.port))?;
         let mut ssl_stream = SslStream::new(ssl, tcp_stream)?;
-        Pin::new(&mut ssl_stream).connect().await?;
+        ssl_stream.connect()?;
 
         let channel_message = pack_channel_message(&serde_json::to_vec(&params)?);
-        ssl_stream.write_all(&channel_message).await?;
+        ssl_stream.write_all(&channel_message)?;
 
         let mut response = vec![];
-        ssl_stream.read_to_end(&mut response).await?;
+        ssl_stream.read_to_end(&mut response)?;
         let data: Value = serde_json::from_slice(&Vec::from(&response[42..]))?;
         let result = &data["result"];
         let error = &data["error"];
