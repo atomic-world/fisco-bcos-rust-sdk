@@ -1,6 +1,6 @@
+use num_bigint::BigInt;
 use async_trait::async_trait;
 use serde_json::{Value, json};
-use num_bigint::{BigInt};
 
 use crate::service_error::ServiceError;
 

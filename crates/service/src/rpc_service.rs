@@ -1,7 +1,7 @@
 use serde_json::Value;
 use async_trait::async_trait;
-use hyper::http::{Request, Method};
 use hyper::{Body, Client};
+use hyper::http::{Request, Method};
 
 use crate::service_trait::ServiceTrait;
 use crate::service_error::ServiceError;

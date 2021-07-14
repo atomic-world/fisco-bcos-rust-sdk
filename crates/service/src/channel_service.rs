@@ -2,7 +2,7 @@ use uuid::Uuid;
 use std::pin::Pin;
 use std::path::Path;
 use async_trait::async_trait;
-use serde_json::{Value};
+use serde_json::Value;
 use tokio_openssl::SslStream;
 use tokio::net::TcpStream;
 use tokio::io::{AsyncWriteExt, AsyncReadExt};
