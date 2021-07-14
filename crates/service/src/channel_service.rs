@@ -68,7 +68,7 @@ impl ServiceTrait for ChannelService {
             buffer.append(&mut vec![0; 256]);
             let read_size = ssl_stream.read(&mut buffer[start_index..])?;
             buffer_size += read_size;
-            if read_size == 0 || read_size < 256 {
+            if read_size < 256 {
                 break 'outer;
             }
         }
