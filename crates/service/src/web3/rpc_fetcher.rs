@@ -2,26 +2,24 @@ use serde_json::Value;
 use async_trait::async_trait;
 use hyper::{Body, Client};
 use hyper::http::{Request, Method};
+use crate::web3::{fetcher_trait::FetcherTrait, service_error::ServiceError};
 
-use crate::service_trait::ServiceTrait;
-use crate::service_error::ServiceError;
-
-pub struct RPCService {
-  host: String,
-  port: i32,
+pub struct RPCFetcher  {
+    host: String,
+    port: i32,
 }
 
-impl RPCService {
-    pub fn new(node: &str, port: i32) -> RPCService {
-        RPCService {
-            host: node.to_owned(),
-            port: port,
+impl RPCFetcher {
+    pub fn new(host: &str, port: i32) -> RPCFetcher {
+        RPCFetcher {
+            host: host.to_owned(),
+            port,
         }
     }
 }
 
 #[async_trait]
-impl ServiceTrait for RPCService {
+impl FetcherTrait for RPCFetcher {
     async fn fetch(&self, params: &Value) -> Result<Value, ServiceError> {
         let request_body = serde_json::to_string(&params)?;
         let request = Request::builder()

@@ -1,13 +1,12 @@
 use uuid::Uuid;
 use std::path::Path;
-use async_trait::async_trait;
 use serde_json::Value;
-use std::net::TcpStream;
+use async_trait::async_trait;
 use std::io::{Write, Read};
+use std::net::TcpStream;
 use openssl::ssl::{SslMethod, SslVerifyMode, SslFiletype, SslConnector, SslStream};
 
-use crate::service_trait::ServiceTrait;
-use crate::service_error::ServiceError;
+use crate::web3::{fetcher_trait::FetcherTrait, service_error::ServiceError};
 
 // 格式详情参见：
 // https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/design/protocol_description.html#channelmessage-v2
@@ -21,7 +20,7 @@ fn pack_channel_message(data: &Vec<u8>) -> Vec<u8> {
     buffer
 }
 
-pub struct ChannelService {
+pub struct ChannelFetcher {
     host: String,
     port: i32,
     ca_file: String,
@@ -29,11 +28,11 @@ pub struct ChannelService {
     key_file: String,
 }
 
-impl ChannelService {
-    pub fn new(host: &str, port: i32, ca_file: &str, cert_file: &str, key_file: &str) -> ChannelService {
-        ChannelService {
+impl ChannelFetcher {
+    pub fn new(host: &str, port: i32, ca_file: &str, cert_file: &str, key_file: &str) -> ChannelFetcher {
+        ChannelFetcher {
+            port,
             host: host.to_owned(),
-            port: port,
             ca_file: ca_file.to_owned(),
             cert_file: cert_file.to_owned(),
             key_file: key_file.to_owned(),
@@ -42,17 +41,16 @@ impl ChannelService {
 }
 
 #[async_trait]
-impl ServiceTrait for ChannelService {
+impl FetcherTrait for ChannelFetcher {
     async fn fetch(&self, params: &Value) -> Result<Value, ServiceError> {
         let ca_file_path = Path::new(&self.ca_file);
-        let mut ssl_builder = SslConnector::builder(SslMethod::tls())?;
         let curve = openssl::ec::EcKey::from_curve_name(openssl::nid::Nid::SECP256K1)?;
+        let mut ssl_builder = SslConnector::builder(SslMethod::tls())?;
         ssl_builder.set_verify(SslVerifyMode::NONE);
         ssl_builder.set_tmp_ecdh(&curve)?;
         ssl_builder.set_ca_file(ca_file_path)?;
         ssl_builder.set_certificate_chain_file(&Path::new(&self.cert_file))?;
         ssl_builder.set_private_key_file(&Path::new(&self.key_file), SslFiletype::PEM)?;
-
         let ssl = ssl_builder.build().configure()?.into_ssl(&self.host)?;
         let tcp_stream = TcpStream::connect(format!("{}:{}", self.host, self.port))?;
         let mut ssl_stream = SslStream::new(ssl, tcp_stream)?;
@@ -60,7 +58,6 @@ impl ServiceTrait for ChannelService {
 
         let request_data = pack_channel_message(&serde_json::to_vec(&params)?);
         ssl_stream.write(&request_data)?;
-
         let mut buffer_size = 0;
         let mut buffer:Vec<u8> = Vec::new();
         'outer: loop {
