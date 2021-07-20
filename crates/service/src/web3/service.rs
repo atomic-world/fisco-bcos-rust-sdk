@@ -1,6 +1,6 @@
-use num_bigint::BigInt;
 use serde_json::{Value, json};
 use crate::web3::{fetcher_trait::FetcherTrait, service_error::ServiceError};
+use crate::helpers::{parse_serde_json_string_value, parse_serde_json_string_array_value};
 
 fn generate_request_params(method: &str, params: &Value) -> Value {
     json!({
@@ -12,18 +12,8 @@ fn generate_request_params(method: &str, params: &Value) -> Value {
 }
 
 fn generate_request_params_by_group_id(method: &str, group_id: u32) -> Value {
-    let group_ids = [group_id];
-    let params = json!(group_ids);
+    let params = json!([group_id]);
     generate_request_params(method, &params)
-}
-
-fn convert_response_to_big_int(response: &Value)  -> BigInt {
-    let bytes = response.as_str().unwrap().trim_start_matches("0x").as_bytes();
-    BigInt::parse_bytes(bytes, 16).unwrap()
-}
-
-fn convert_response_to_string_array(response: &Value) -> Vec<String> {
-    response.as_array().unwrap().into_iter().map(|item| item.to_string()).collect()
 }
 
 pub struct Service {
@@ -40,28 +30,28 @@ impl Service {
         Ok(self.fetcher.fetch(&params).await?)
     }
 
-    pub async fn get_pbft_view(&self, group_id: u32) -> Result<BigInt, ServiceError> {
-        let params = generate_request_params_by_group_id("getPbftView", group_id);
-        let response = self.fetcher.fetch(&params).await?;
-        Ok(convert_response_to_big_int(&response))
-    }
-
-    pub async fn get_block_number(&self, group_id: u32) -> Result<BigInt, ServiceError> {
+    pub async fn get_block_number(&self, group_id: u32) -> Result<String, ServiceError> {
         let params = generate_request_params_by_group_id("getBlockNumber", group_id);
         let response = self.fetcher.fetch(&params).await?;
-        Ok(convert_response_to_big_int(&response))
+        Ok(parse_serde_json_string_value(&response))
+    }
+
+    pub async fn get_pbft_view(&self, group_id: u32) -> Result<String, ServiceError> {
+        let params = generate_request_params_by_group_id("getPbftView", group_id);
+        let response = self.fetcher.fetch(&params).await?;
+        Ok(parse_serde_json_string_value(&response))
     }
 
     pub async fn get_sealer_list(&self, group_id: u32) -> Result<Vec<String>, ServiceError> {
         let params = generate_request_params_by_group_id("getSealerList", group_id);
         let response = self.fetcher.fetch(&params).await?;
-        Ok(convert_response_to_string_array(&response))
+        Ok(parse_serde_json_string_array_value(&response))
     }
 
     pub async fn get_observer_list(&self, group_id: u32) -> Result<Vec<String>, ServiceError> {
         let params = generate_request_params_by_group_id("getObserverList", group_id);
         let response = self.fetcher.fetch(&params).await?;
-        Ok(convert_response_to_string_array(&response))
+        Ok(parse_serde_json_string_array_value(&response))
     }
 
     pub async fn get_consensus_status(&self, group_id: u32) -> Result<Value, ServiceError> {
@@ -83,18 +73,59 @@ impl Service {
     pub async fn get_group_peers(&self, group_id: u32) -> Result<Vec<String>, ServiceError> {
         let params = generate_request_params_by_group_id("getGroupPeers", group_id);
         let response = self.fetcher.fetch(&params).await?;
-        Ok(convert_response_to_string_array(&response))
+        Ok(parse_serde_json_string_array_value(&response))
     }
 
     pub async fn get_node_id_list(&self, group_id: u32) -> Result<Vec<String>, ServiceError> {
         let params = generate_request_params_by_group_id("getNodeIDList", group_id);
         let response = self.fetcher.fetch(&params).await?;
-        Ok(convert_response_to_string_array(&response))
+        Ok(parse_serde_json_string_array_value(&response))
     }
 
     pub async fn get_group_list(&self) -> Result<Vec<String>, ServiceError> {
         let params = generate_request_params("getGroupList", &json!(null));
         let response = self.fetcher.fetch(&params).await?;
-        Ok(convert_response_to_string_array(&response))
+        Ok(parse_serde_json_string_array_value(&response))
+    }
+
+    pub async fn get_block_by_hash(&self, group_id: u32, block_hash: &str, include_transactions: bool) -> Result<Value, ServiceError> {
+        let params = generate_request_params(
+            "getBlockByHash",
+            &json!([group_id, block_hash, include_transactions])
+        );
+        Ok(self.fetcher.fetch(&params).await?)
+    }
+
+    pub async fn get_block_by_number(&self, group_id: u32, block_number: &str, include_transactions: bool)-> Result<Value, ServiceError> {
+        let params = generate_request_params(
+            "getBlockByNumber",
+            &json!([group_id, block_number, include_transactions])
+        );
+        Ok(self.fetcher.fetch(&params).await?)
+    }
+
+    pub async fn get_block_header_by_hash(&self, group_id: u32, block_hash: &str, include_transactions: bool) -> Result<Value, ServiceError> {
+        let params = generate_request_params(
+            "getBlockHeaderByHash",
+            &json!([group_id, block_hash, include_transactions])
+        );
+        Ok(self.fetcher.fetch(&params).await?)
+    }
+
+    pub async fn get_block_header_by_number(&self, group_id: u32, block_number: &str, include_transactions: bool) -> Result<Value, ServiceError> {
+        let params = generate_request_params(
+            "getBlockHeaderByNumber",
+            &json!([group_id, block_number, include_transactions])
+        );
+        Ok(self.fetcher.fetch(&params).await?)
+    }
+
+    pub async fn get_block_hash_by_number(&self, group_id: u32, block_number: &str) -> Result<String, ServiceError> {
+        let params = generate_request_params(
+            "getBlockHashByNumber",
+            &json!([group_id, block_number])
+        );
+        let response = self.fetcher.fetch(&params).await?;
+        Ok(parse_serde_json_string_value(&response))
     }
 }

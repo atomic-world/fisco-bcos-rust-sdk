@@ -10,7 +10,7 @@ async fn main() {
     println!("PBFT View: {}", pbft_view);
 
     let block_number = web3_service.get_block_number(1).await.unwrap();
-    println!("Block Number: {}", block_number);
+    println!("Block Number: {:?}", block_number);
 
     let sealer_list = web3_service.get_sealer_list(1).await.unwrap();
     println!("Sealer List: {:?}", sealer_list);
@@ -35,4 +35,39 @@ async fn main() {
 
     let group_list = web3_service.get_group_list().await.unwrap();
     println!("Group List: {:?}", group_list);
+
+    let block_from_number = web3_service.get_block_by_number(
+        1,
+        &block_number,
+        true
+    ).await.unwrap();
+    println!("Block from number : {:?}", block_from_number);
+
+    let block_hash = block_from_number["hash"].as_str().unwrap();
+    let block_from_hash = web3_service.get_block_by_hash(
+        1,
+        block_hash,
+        true
+    ).await.unwrap();
+    println!("Block from hash : {:?}", block_from_hash);
+
+    let block_header_from_hash = web3_service.get_block_header_by_hash(
+        1,
+        block_hash,
+        true
+    ).await.unwrap();
+    println!("Block Header from hash: {:?}", block_header_from_hash);
+
+    let block_header_from_number = web3_service.get_block_header_by_number(
+        1,
+        &block_number,
+        true
+    ).await.unwrap();
+    println!("Block Header from number: {:?}", block_header_from_number);
+
+    let block_hash_from_number = web3_service.get_block_hash_by_number(
+        1,
+        &block_number
+    ).await.unwrap();
+    println!("Block Hash from number: {:?}", block_hash_from_number);
 }
