@@ -1,5 +1,5 @@
 pub mod web3;
-pub mod helpers;
+mod helpers;
 
 use std::{fs, path::Path};
 use serde_json::Value;
