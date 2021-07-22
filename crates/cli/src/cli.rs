@@ -81,37 +81,37 @@ impl Cli {
                 }
             },
             "get_client_version" => {
-                self.call_web3_service(|| Box::pin( self.web3_service.as_ref().unwrap().get_client_version())).await;
+                self.call_web3_service(|| Box::pin(self.web3_service.as_ref().unwrap().get_client_version())).await;
             },
             "get_block_number" => {
-                self.call_web3_service(|| Box::pin( self.web3_service.as_ref().unwrap().get_block_number())).await;
+                self.call_web3_service(|| Box::pin(self.web3_service.as_ref().unwrap().get_block_number())).await;
             },
             "get_pbft_view" => {
-                self.call_web3_service(|| Box::pin( self.web3_service.as_ref().unwrap().get_pbft_view())).await;
+                self.call_web3_service(|| Box::pin(self.web3_service.as_ref().unwrap().get_pbft_view())).await;
             },
             "get_sealer_list" => {
-                self.call_web3_service(|| Box::pin( self.web3_service.as_ref().unwrap().get_sealer_list())).await;
+                self.call_web3_service(|| Box::pin(self.web3_service.as_ref().unwrap().get_sealer_list())).await;
             },
             "get_observer_list" => {
-                self.call_web3_service(|| Box::pin( self.web3_service.as_ref().unwrap().get_observer_list())).await;
+                self.call_web3_service(|| Box::pin(self.web3_service.as_ref().unwrap().get_observer_list())).await;
             },
             "get_consensus_status" => {
-                self.call_web3_service(|| Box::pin( self.web3_service.as_ref().unwrap().get_consensus_status())).await;
+                self.call_web3_service(|| Box::pin(self.web3_service.as_ref().unwrap().get_consensus_status())).await;
             },
             "get_sync_status" => {
-                self.call_web3_service(|| Box::pin( self.web3_service.as_ref().unwrap().get_sync_status())).await;
+                self.call_web3_service(|| Box::pin(self.web3_service.as_ref().unwrap().get_sync_status())).await;
             },
             "get_peers" => {
-                self.call_web3_service(|| Box::pin( self.web3_service.as_ref().unwrap().get_peers())).await;
+                self.call_web3_service(|| Box::pin(self.web3_service.as_ref().unwrap().get_peers())).await;
             },
             "get_group_peers" => {
-                self.call_web3_service(|| Box::pin( self.web3_service.as_ref().unwrap().get_group_peers())).await;
+                self.call_web3_service(|| Box::pin(self.web3_service.as_ref().unwrap().get_group_peers())).await;
             },
             "get_node_id_list" => {
-                self.call_web3_service(|| Box::pin( self.web3_service.as_ref().unwrap().get_node_id_list())).await;
+                self.call_web3_service(|| Box::pin(self.web3_service.as_ref().unwrap().get_node_id_list())).await;
             },
             "get_group_list" => {
-                self.call_web3_service(|| Box::pin( self.web3_service.as_ref().unwrap().get_group_list())).await;
+                self.call_web3_service(|| Box::pin(self.web3_service.as_ref().unwrap().get_group_list())).await;
             },
             "get_block_by_hash" => {
                 if valid_args_len(command_parts_length, 2) {
