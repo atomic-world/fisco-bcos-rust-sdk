@@ -18,12 +18,12 @@ fn generate_request_params_by_group_id(method: &str, group_id: u32) -> Value {
 
 pub struct Service {
     group_id: u32,
-    fetcher: Box<dyn FetcherTrait>,
+    fetcher: Box<dyn FetcherTrait + Send + Sync>,
 }
 
 impl Service {
-    pub fn new(group_id: u32, fetcher: Box<dyn FetcherTrait>) -> Service {
-        Service { group_id, fetcher }
+    pub fn new(group_id: u32, fetcher: Box<dyn FetcherTrait + Send + Sync>) -> Service {
+        Service { group_id, fetcher}
     }
 
     pub async fn get_client_version(&self)  -> Result<Value, ServiceError> {
