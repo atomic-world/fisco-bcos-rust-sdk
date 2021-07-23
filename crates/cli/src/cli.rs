@@ -160,7 +160,7 @@ impl Cli {
                     )).await;
                 }
             },
-            command=> println!("\nUnavailable command {:?}\n", command),
+            command => println!("\nUnavailable command {:?}\n", command),
         }
     }
 }

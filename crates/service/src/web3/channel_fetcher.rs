@@ -60,13 +60,13 @@ impl FetcherTrait for ChannelFetcher {
         ssl_stream.write(&request_data)?;
         let mut buffer_size = 0;
         let mut buffer:Vec<u8> = Vec::new();
-        'outer: loop {
+        loop {
             let start_index = buffer.len();
             buffer.append(&mut vec![0; 256]);
             let read_size = ssl_stream.read(&mut buffer[start_index..])?;
             buffer_size += read_size;
             if read_size < 256 {
-                break 'outer;
+                break;
             }
         }
         let response: Value = serde_json::from_slice(&buffer[42..buffer_size - 1])?;
