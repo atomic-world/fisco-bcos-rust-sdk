@@ -23,6 +23,9 @@ pub enum ServiceError {
     #[error("std::string::FromUtf8Error")]
     StringFromUtf8Error(#[from] std::string::FromUtf8Error),
 
+    #[error("std::array::TryFromSliceError")]
+    TryFromSliceError(#[from] std::array::TryFromSliceError),
+
     #[error("fisco bcos service error")]
     FiscoBcosError {
         code: i64,

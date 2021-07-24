@@ -7,6 +7,7 @@ use std::net::TcpStream;
 use openssl::ssl::{SslMethod, SslVerifyMode, SslFiletype, SslConnector, SslStream};
 
 use crate::web3::{fetcher_trait::FetcherTrait, service_error::ServiceError};
+use std::convert::TryInto;
 
 // 格式详情参见：
 // https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/design/protocol_description.html#channelmessage-v2
@@ -58,17 +59,12 @@ impl FetcherTrait for ChannelFetcher {
 
         let request_data = pack_channel_message(&serde_json::to_vec(&params)?);
         ssl_stream.write(&request_data)?;
-        let mut buffer_size = 0;
-        let mut buffer:Vec<u8> = Vec::new();
-        loop {
-            let start_index = buffer.len();
-            buffer.append(&mut vec![0; 256]);
-            let read_size = ssl_stream.read(&mut buffer[start_index..])?;
-            buffer_size += read_size;
-            if read_size < 256 {
-                break;
-            }
-        }
+
+        let mut buffer:Vec<u8> = vec![0; 4];
+        ssl_stream.read(&mut buffer[0..])?;
+        let buffer_size = u32::from_be_bytes(buffer.clone().as_slice().try_into()?) as usize;
+        buffer.append(&mut vec![0; buffer_size - 4]);
+        ssl_stream.read(&mut buffer[4..])?;
         let response: Value = serde_json::from_slice(&buffer[42..buffer_size - 1])?;
         let result = &response["result"];
         let error = &response["error"];
