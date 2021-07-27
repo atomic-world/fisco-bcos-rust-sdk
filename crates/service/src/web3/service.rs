@@ -92,7 +92,7 @@ impl Service {
     pub async fn get_block_by_hash(&self, block_hash: &str, include_transactions: bool) -> Result<Value, ServiceError> {
         let params = generate_request_params(
             "getBlockByHash",
-            &json!([self.group_id, block_hash, include_transactions])
+            &json!([self.group_id, block_hash, include_transactions]),
         );
         Ok(self.fetcher.fetch(&params).await?)
     }
@@ -100,7 +100,7 @@ impl Service {
     pub async fn get_block_by_number(&self, block_number: &str, include_transactions: bool)-> Result<Value, ServiceError> {
         let params = generate_request_params(
             "getBlockByNumber",
-            &json!([self.group_id, block_number, include_transactions])
+            &json!([self.group_id, block_number, include_transactions]),
         );
         Ok(self.fetcher.fetch(&params).await?)
     }
@@ -108,7 +108,7 @@ impl Service {
     pub async fn get_block_header_by_hash(&self, block_hash: &str, include_transactions: bool) -> Result<Value, ServiceError> {
         let params = generate_request_params(
             "getBlockHeaderByHash",
-            &json!([self.group_id, block_hash, include_transactions])
+            &json!([self.group_id, block_hash, include_transactions]),
         );
         Ok(self.fetcher.fetch(&params).await?)
     }
@@ -116,7 +116,7 @@ impl Service {
     pub async fn get_block_header_by_number(&self, block_number: &str, include_transactions: bool) -> Result<Value, ServiceError> {
         let params = generate_request_params(
             "getBlockHeaderByNumber",
-            &json!([self.group_id, block_number, include_transactions])
+            &json!([self.group_id, block_number, include_transactions]),
         );
         Ok(self.fetcher.fetch(&params).await?)
     }
@@ -124,7 +124,7 @@ impl Service {
     pub async fn get_block_hash_by_number(&self, block_number: &str) -> Result<String, ServiceError> {
         let params = generate_request_params(
             "getBlockHashByNumber",
-            &json!([self.group_id, block_number])
+            &json!([self.group_id, block_number]),
         );
         let response = self.fetcher.fetch(&params).await?;
         Ok(parse_serde_json_string_value(&response))
