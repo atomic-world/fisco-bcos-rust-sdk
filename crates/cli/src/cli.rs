@@ -55,7 +55,13 @@ impl Cli {
                 "get_sync_status", "get_peers", "get_group_peers",
                 "get_node_id_list", "get_group_list", "get_block_by_hash",
                 "get_block_by_number", "get_block_header_by_hash", "get_block_header_by_number",
-                "get_block_hash_by_number",
+                "get_block_hash_by_number", "get_transaction_by_hash", "get_transaction_by_block_hash_and_index",
+                "get_transaction_by_block_number_and_index", "get_transaction_receipt",
+                "get_pending_transactions", "get_pending_tx_size", "get_code",
+                "get_total_transaction_count", "get_system_config_by_key",
+                "get_transaction_by_hash_with_proof", "get_transaction_receipt_by_hash_with_proof",
+                "query_group_status", "get_node_info", "get_batch_receipts_by_block_number_and_range",
+                "get_batch_receipts_by_block_hash_and_range",
             ],
         );
         println!("3. Type help to get help");
@@ -118,7 +124,7 @@ impl Cli {
                     self.call_web3_service(|| Box::pin(
                         self.web3_service.as_ref().unwrap().get_block_by_hash(
                             command_parts[1],
-                            convert_str_to_bool(command_parts[2])
+                            convert_str_to_bool(command_parts[2]),
                         )
                     )).await;
                 }
@@ -128,7 +134,7 @@ impl Cli {
                     self.call_web3_service(|| Box::pin(
                         self.web3_service.as_ref().unwrap().get_block_by_number(
                             command_parts[1],
-                            convert_str_to_bool(command_parts[2])
+                            convert_str_to_bool(command_parts[2]),
                         )
                     )).await;
                 }
@@ -138,7 +144,7 @@ impl Cli {
                     self.call_web3_service(|| Box::pin(
                         self.web3_service.as_ref().unwrap().get_block_header_by_hash(
                             command_parts[1],
-                            convert_str_to_bool(command_parts[2])
+                            convert_str_to_bool(command_parts[2]),
                         )
                     )).await;
                 }
@@ -148,7 +154,7 @@ impl Cli {
                     self.call_web3_service(|| Box::pin(
                         self.web3_service.as_ref().unwrap().get_block_header_by_number(
                             command_parts[1],
-                            convert_str_to_bool(command_parts[2])
+                            convert_str_to_bool(command_parts[2]),
                         )
                     )).await;
                 }
@@ -157,6 +163,121 @@ impl Cli {
                 if valid_args_len(command_parts_length, 1) {
                     self.call_web3_service(|| Box::pin(
                         self.web3_service.as_ref().unwrap().get_block_hash_by_number(command_parts[1])
+                    )).await;
+                }
+            },
+            "get_transaction_by_hash" => {
+                if valid_args_len(command_parts_length, 1) {
+                    self.call_web3_service(|| Box::pin(
+                        self.web3_service.as_ref().unwrap().get_transaction_by_hash(command_parts[1])
+                    )).await;
+                }
+            },
+            "get_transaction_by_block_hash_and_index" => {
+                if valid_args_len(command_parts_length, 2) {
+                    self.call_web3_service(|| Box::pin(
+                        self.web3_service.as_ref().unwrap().get_transaction_by_block_hash_and_index(
+                            command_parts[1],
+                            command_parts[2],
+                        )
+                    )).await;
+                }
+            },
+            "get_transaction_by_block_number_and_index" => {
+                if valid_args_len(command_parts_length, 2) {
+                    self.call_web3_service(|| Box::pin(
+                        self.web3_service.as_ref().unwrap().get_transaction_by_block_number_and_index(
+                            command_parts[1],
+                            command_parts[2],
+                        )
+                    )).await;
+                }
+            },
+            "get_transaction_receipt" => {
+                if valid_args_len(command_parts_length, 1) {
+                    self.call_web3_service(|| Box::pin(
+                        self.web3_service.as_ref().unwrap().get_transaction_receipt(command_parts[1])
+                    )).await;
+                }
+            },
+            "get_pending_transactions" => {
+                self.call_web3_service(|| Box::pin(
+                    self.web3_service.as_ref().unwrap().get_pending_transactions()
+                )).await;
+            },
+            "get_pending_tx_size" => {
+                self.call_web3_service(|| Box::pin(
+                    self.web3_service.as_ref().unwrap().get_pending_tx_size()
+                )).await;
+            },
+            "get_code" => {
+                if valid_args_len(command_parts_length, 1) {
+                    self.call_web3_service(|| Box::pin(
+                        self.web3_service.as_ref().unwrap().get_code(command_parts[1])
+                    )).await;
+                }
+            },
+            "get_total_transaction_count" => {
+                self.call_web3_service(|| Box::pin(
+                    self.web3_service.as_ref().unwrap().get_total_transaction_count()
+                )).await;
+            },
+            "get_system_config_by_key" => {
+                if valid_args_len(command_parts_length, 1) {
+                    self.call_web3_service(|| Box::pin(
+                        self.web3_service.as_ref().unwrap().get_system_config_by_key(command_parts[1])
+                    )).await;
+                }
+            },
+            "get_transaction_by_hash_with_proof" => {
+                if valid_args_len(command_parts_length, 1) {
+                    self.call_web3_service(|| Box::pin(
+                        self.web3_service.as_ref().unwrap().get_transaction_by_hash_with_proof(
+                            command_parts[1],
+                        )
+                    )).await;
+                }
+            },
+            "get_transaction_receipt_by_hash_with_proof" => {
+                if valid_args_len(command_parts_length, 1) {
+                    self.call_web3_service(|| Box::pin(
+                        self.web3_service.as_ref().unwrap().get_transaction_receipt_by_hash_with_proof(
+                            command_parts[1],
+                        )
+                    )).await;
+                }
+            },
+            "query_group_status" => {
+                self.call_web3_service(|| Box::pin(
+                    self.web3_service.as_ref().unwrap().query_group_status()
+                )).await;
+            },
+            "get_node_info" => {
+                self.call_web3_service(|| Box::pin(
+                    self.web3_service.as_ref().unwrap().get_node_info()
+                )).await;
+            },
+            "get_batch_receipts_by_block_number_and_range" => {
+                if valid_args_len(command_parts_length, 4) {
+                    self.call_web3_service(|| Box::pin(
+                        self.web3_service.as_ref().unwrap().get_batch_receipts_by_block_number_and_range(
+                            command_parts[1],
+                            String::from(command_parts[2]).parse::<u32>().unwrap(),
+                            String::from(command_parts[3]).parse::<i32>().unwrap(),
+                            convert_str_to_bool(command_parts[4]),
+                        )
+                    )).await;
+                }
+            },
+            "get_batch_receipts_by_block_hash_and_range" => {
+                if valid_args_len(command_parts_length, 4) {
+                    self.call_web3_service(|| Box::pin(
+                        self.web3_service.as_ref().unwrap().get_batch_receipts_by_block_hash_and_range(
+                            command_parts[1],
+                            String::from(command_parts[2]).parse::<u32>().unwrap(),
+                            String::from(command_parts[3]).parse::<i32>().unwrap(),
+                            convert_str_to_bool(command_parts[4]),
+                        )
                     )).await;
                 }
             },
