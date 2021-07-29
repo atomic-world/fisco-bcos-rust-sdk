@@ -30,13 +30,14 @@ impl Cli {
         };
     }
 
-    async fn call_web3_service<'a, T, F>(&self, f: F)
+    async fn call_web3_service<'a, T, F>(&'a self, f: F)
     where
         T: Debug,
-        F: FnOnce() -> BoxFuture<'a, Result<T, Web3ServiceError>>
+        F: FnOnce(&'a Web3Service) -> BoxFuture<'a, Result<T, Web3ServiceError>>
     {
         if self.web3_service.is_some() {
-            match f().await {
+            let web3_service = self.web3_service.as_ref().unwrap();
+            match f(web3_service).await {
                 Ok(data) => println!("\n{:?}\n", data),
                 Err(error) => println!("\nError: {:?}\n", error),
             };
@@ -87,42 +88,42 @@ impl Cli {
                 }
             },
             "get_client_version" => {
-                self.call_web3_service(|| Box::pin(self.web3_service.as_ref().unwrap().get_client_version())).await;
+                self.call_web3_service(|service| Box::pin(service.get_client_version())).await;
             },
             "get_block_number" => {
-                self.call_web3_service(|| Box::pin(self.web3_service.as_ref().unwrap().get_block_number())).await;
+                self.call_web3_service(|service| Box::pin(service.get_block_number())).await;
             },
             "get_pbft_view" => {
-                self.call_web3_service(|| Box::pin(self.web3_service.as_ref().unwrap().get_pbft_view())).await;
+                self.call_web3_service(|service| Box::pin(service.get_pbft_view())).await;
             },
             "get_sealer_list" => {
-                self.call_web3_service(|| Box::pin(self.web3_service.as_ref().unwrap().get_sealer_list())).await;
+                self.call_web3_service(|service| Box::pin(service.get_sealer_list())).await;
             },
             "get_observer_list" => {
-                self.call_web3_service(|| Box::pin(self.web3_service.as_ref().unwrap().get_observer_list())).await;
+                self.call_web3_service(|service| Box::pin(service.get_observer_list())).await;
             },
             "get_consensus_status" => {
-                self.call_web3_service(|| Box::pin(self.web3_service.as_ref().unwrap().get_consensus_status())).await;
+                self.call_web3_service(|service| Box::pin(service.get_consensus_status())).await;
             },
             "get_sync_status" => {
-                self.call_web3_service(|| Box::pin(self.web3_service.as_ref().unwrap().get_sync_status())).await;
+                self.call_web3_service(|service| Box::pin(service.get_sync_status())).await;
             },
             "get_peers" => {
-                self.call_web3_service(|| Box::pin(self.web3_service.as_ref().unwrap().get_peers())).await;
+                self.call_web3_service(|service| Box::pin(service.get_peers())).await;
             },
             "get_group_peers" => {
-                self.call_web3_service(|| Box::pin(self.web3_service.as_ref().unwrap().get_group_peers())).await;
+                self.call_web3_service(|service| Box::pin(service.get_group_peers())).await;
             },
             "get_node_id_list" => {
-                self.call_web3_service(|| Box::pin(self.web3_service.as_ref().unwrap().get_node_id_list())).await;
+                self.call_web3_service(|service| Box::pin(service.get_node_id_list())).await;
             },
             "get_group_list" => {
-                self.call_web3_service(|| Box::pin(self.web3_service.as_ref().unwrap().get_group_list())).await;
+                self.call_web3_service(|service| Box::pin(service.get_group_list())).await;
             },
             "get_block_by_hash" => {
                 if valid_args_len(command_parts_length, 2) {
-                    self.call_web3_service(|| Box::pin(
-                        self.web3_service.as_ref().unwrap().get_block_by_hash(
+                    self.call_web3_service(|service| Box::pin(
+                        service.get_block_by_hash(
                             command_parts[1],
                             convert_str_to_bool(command_parts[2]),
                         )
@@ -131,8 +132,8 @@ impl Cli {
             },
             "get_block_by_number" => {
                 if valid_args_len(command_parts_length, 2) {
-                    self.call_web3_service(|| Box::pin(
-                        self.web3_service.as_ref().unwrap().get_block_by_number(
+                    self.call_web3_service(|service| Box::pin(
+                        service.get_block_by_number(
                             command_parts[1],
                             convert_str_to_bool(command_parts[2]),
                         )
@@ -141,8 +142,8 @@ impl Cli {
             },
             "get_block_header_by_hash" => {
                 if valid_args_len(command_parts_length, 2) {
-                    self.call_web3_service(|| Box::pin(
-                        self.web3_service.as_ref().unwrap().get_block_header_by_hash(
+                    self.call_web3_service(|service| Box::pin(
+                        service.get_block_header_by_hash(
                             command_parts[1],
                             convert_str_to_bool(command_parts[2]),
                         )
@@ -151,8 +152,8 @@ impl Cli {
             },
             "get_block_header_by_number" => {
                 if valid_args_len(command_parts_length, 2) {
-                    self.call_web3_service(|| Box::pin(
-                        self.web3_service.as_ref().unwrap().get_block_header_by_number(
+                    self.call_web3_service(|service| Box::pin(
+                        service.get_block_header_by_number(
                             command_parts[1],
                             convert_str_to_bool(command_parts[2]),
                         )
@@ -161,22 +162,22 @@ impl Cli {
             },
             "get_block_hash_by_number" => {
                 if valid_args_len(command_parts_length, 1) {
-                    self.call_web3_service(|| Box::pin(
-                        self.web3_service.as_ref().unwrap().get_block_hash_by_number(command_parts[1])
+                    self.call_web3_service(|service| Box::pin(
+                        service.get_block_hash_by_number(command_parts[1])
                     )).await;
                 }
             },
             "get_transaction_by_hash" => {
                 if valid_args_len(command_parts_length, 1) {
-                    self.call_web3_service(|| Box::pin(
-                        self.web3_service.as_ref().unwrap().get_transaction_by_hash(command_parts[1])
+                    self.call_web3_service(|service| Box::pin(
+                        service.get_transaction_by_hash(command_parts[1])
                     )).await;
                 }
             },
             "get_transaction_by_block_hash_and_index" => {
                 if valid_args_len(command_parts_length, 2) {
-                    self.call_web3_service(|| Box::pin(
-                        self.web3_service.as_ref().unwrap().get_transaction_by_block_hash_and_index(
+                    self.call_web3_service(|service| Box::pin(
+                        service.get_transaction_by_block_hash_and_index(
                             command_parts[1],
                             command_parts[2],
                         )
@@ -185,8 +186,8 @@ impl Cli {
             },
             "get_transaction_by_block_number_and_index" => {
                 if valid_args_len(command_parts_length, 2) {
-                    self.call_web3_service(|| Box::pin(
-                        self.web3_service.as_ref().unwrap().get_transaction_by_block_number_and_index(
+                    self.call_web3_service(|service| Box::pin(
+                        service.get_transaction_by_block_number_and_index(
                             command_parts[1],
                             command_parts[2],
                         )
@@ -195,44 +196,44 @@ impl Cli {
             },
             "get_transaction_receipt" => {
                 if valid_args_len(command_parts_length, 1) {
-                    self.call_web3_service(|| Box::pin(
-                        self.web3_service.as_ref().unwrap().get_transaction_receipt(command_parts[1])
+                    self.call_web3_service(|service| Box::pin(
+                        service.get_transaction_receipt(command_parts[1])
                     )).await;
                 }
             },
             "get_pending_transactions" => {
-                self.call_web3_service(|| Box::pin(
-                    self.web3_service.as_ref().unwrap().get_pending_transactions()
+                self.call_web3_service(|service| Box::pin(
+                    service.get_pending_transactions()
                 )).await;
             },
             "get_pending_tx_size" => {
-                self.call_web3_service(|| Box::pin(
-                    self.web3_service.as_ref().unwrap().get_pending_tx_size()
+                self.call_web3_service(|service| Box::pin(
+                    service.get_pending_tx_size()
                 )).await;
             },
             "get_code" => {
                 if valid_args_len(command_parts_length, 1) {
-                    self.call_web3_service(|| Box::pin(
-                        self.web3_service.as_ref().unwrap().get_code(command_parts[1])
+                    self.call_web3_service(|service| Box::pin(
+                        service.get_code(command_parts[1])
                     )).await;
                 }
             },
             "get_total_transaction_count" => {
-                self.call_web3_service(|| Box::pin(
-                    self.web3_service.as_ref().unwrap().get_total_transaction_count()
+                self.call_web3_service(|service| Box::pin(
+                    service.get_total_transaction_count()
                 )).await;
             },
             "get_system_config_by_key" => {
                 if valid_args_len(command_parts_length, 1) {
-                    self.call_web3_service(|| Box::pin(
-                        self.web3_service.as_ref().unwrap().get_system_config_by_key(command_parts[1])
+                    self.call_web3_service(|service| Box::pin(
+                        service.get_system_config_by_key(command_parts[1])
                     )).await;
                 }
             },
             "get_transaction_by_hash_with_proof" => {
                 if valid_args_len(command_parts_length, 1) {
-                    self.call_web3_service(|| Box::pin(
-                        self.web3_service.as_ref().unwrap().get_transaction_by_hash_with_proof(
+                    self.call_web3_service(|service| Box::pin(
+                        service.get_transaction_by_hash_with_proof(
                             command_parts[1],
                         )
                     )).await;
@@ -240,27 +241,27 @@ impl Cli {
             },
             "get_transaction_receipt_by_hash_with_proof" => {
                 if valid_args_len(command_parts_length, 1) {
-                    self.call_web3_service(|| Box::pin(
-                        self.web3_service.as_ref().unwrap().get_transaction_receipt_by_hash_with_proof(
+                    self.call_web3_service(|service| Box::pin(
+                        service.get_transaction_receipt_by_hash_with_proof(
                             command_parts[1],
                         )
                     )).await;
                 }
             },
             "query_group_status" => {
-                self.call_web3_service(|| Box::pin(
-                    self.web3_service.as_ref().unwrap().query_group_status()
+                self.call_web3_service(|service| Box::pin(
+                    service.query_group_status()
                 )).await;
             },
             "get_node_info" => {
-                self.call_web3_service(|| Box::pin(
-                    self.web3_service.as_ref().unwrap().get_node_info()
+                self.call_web3_service(|service| Box::pin(
+                    service.get_node_info()
                 )).await;
             },
             "get_batch_receipts_by_block_number_and_range" => {
                 if valid_args_len(command_parts_length, 4) {
-                    self.call_web3_service(|| Box::pin(
-                        self.web3_service.as_ref().unwrap().get_batch_receipts_by_block_number_and_range(
+                    self.call_web3_service(|service| Box::pin(
+                        service.get_batch_receipts_by_block_number_and_range(
                             command_parts[1],
                             String::from(command_parts[2]).parse::<u32>().unwrap(),
                             String::from(command_parts[3]).parse::<i32>().unwrap(),
@@ -271,8 +272,8 @@ impl Cli {
             },
             "get_batch_receipts_by_block_hash_and_range" => {
                 if valid_args_len(command_parts_length, 4) {
-                    self.call_web3_service(|| Box::pin(
-                        self.web3_service.as_ref().unwrap().get_batch_receipts_by_block_hash_and_range(
+                    self.call_web3_service(|service| Box::pin(
+                        service.get_batch_receipts_by_block_hash_and_range(
                             command_parts[1],
                             String::from(command_parts[2]).parse::<u32>().unwrap(),
                             String::from(command_parts[3]).parse::<i32>().unwrap(),
