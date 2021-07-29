@@ -200,6 +200,21 @@ impl Service {
         Ok(parse_serde_json_string_value(&response))
     }
 
+    ///
+    /// params 中的属性如下所示：
+    ///
+    /// |  属性名 | 类型 | 备注 |
+    /// |  ----  | ---- | ---- |
+    /// | from | String | 发送者的地址 |
+    /// | to   | String | 接收者的地址 |
+    /// | value | String | 可选，转移的值 |
+    /// | data | String | 可选，编码的参数，编码规范参考 [Ethereum Contract ABI](https://solidity.readthedocs.io/en/develop/abi-spec.html) |
+    ///
+    pub async fn call(&self, params: &Value) -> Result<Value, ServiceError> {
+        let request_params = json!([self.group_id, params.clone()]);
+        Ok(self.fetcher.fetch(&generate_request_params("call", &request_params)).await?)
+    }
+
     pub async fn get_transaction_by_hash_with_proof(&self, transaction_hash: &str) -> Result<Value, ServiceError> {
         let params = generate_request_params(
             "getTransactionByHashWithProof",
@@ -212,6 +227,52 @@ impl Service {
         let params = generate_request_params(
             "getTransactionReceiptByHashWithProof",
             &json!([self.group_id, transaction_hash]),
+        );
+        Ok(self.fetcher.fetch(&params).await?)
+    }
+
+    ///
+    /// params 中的属性如下所示：
+    ///
+    /// |  属性名 | 类型 | 备注 |
+    /// |  ----  | ---- | ---- |
+    /// | timestamp | u32 | 创世块时间戳 |
+    /// | sealers   | Vec\<String\> | 共识节点列表，要求所有所列共识节点间存在有效的 P2P 连接 |
+    /// | enable_free_storage | bool | 可选，是否启用 free storage 模式，启用后节点将减少 STORAGE 相关指令的 gas 耗费 |
+    ///
+    pub async fn generate_group(&self, params: &Value) -> Result<Value, ServiceError> {
+        let request_params = json!([self.group_id, params.clone()]);
+        Ok(self.fetcher.fetch(&generate_request_params("generateGroup", &request_params)).await?)
+    }
+
+    pub async fn start_group(&self) -> Result<Value, ServiceError> {
+        let params = generate_request_params(
+            "startGroup",
+            &json!([self.group_id]),
+        );
+        Ok(self.fetcher.fetch(&params).await?)
+    }
+
+    pub async fn stop_group(&self) -> Result<Value, ServiceError> {
+        let params = generate_request_params(
+            "stopGroup",
+            &json!([self.group_id]),
+        );
+        Ok(self.fetcher.fetch(&params).await?)
+    }
+
+    pub async fn remove_group(&self) -> Result<Value, ServiceError> {
+        let params = generate_request_params(
+            "removeGroup",
+            &json!([self.group_id]),
+        );
+        Ok(self.fetcher.fetch(&params).await?)
+    }
+
+    pub async fn recover_group(&self) -> Result<Value, ServiceError> {
+        let params = generate_request_params(
+            "recoverGroup",
+            &json!([self.group_id]),
         );
         Ok(self.fetcher.fetch(&params).await?)
     }

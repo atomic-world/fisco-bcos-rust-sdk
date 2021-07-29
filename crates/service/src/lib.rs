@@ -6,7 +6,9 @@ use serde_json::Value;
 use helpers::parse_serde_json_string_value;
 
 ///
-/// 配置文件格式为：
+/// 根据配置文件创建 web3 service 服务实例。
+///
+/// 配置文件格式如下所示：
 ///
 /// ```json
 /// {

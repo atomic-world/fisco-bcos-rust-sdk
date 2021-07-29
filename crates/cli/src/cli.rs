@@ -1,9 +1,11 @@
 use std::fmt::Debug;
+use serde_json::{json, Value};
 use futures::future::BoxFuture;
 use fisco_bcos_service::{
     create_web3_service,
     web3::{service::Service as Web3Service, service_error::ServiceError as Web3ServiceError},
 };
+use std::str::FromStr;
 
 pub(crate) struct Cli {
     web3_service: Option<Web3Service>,
@@ -20,6 +22,15 @@ fn valid_args_len(command_parts_length: usize, min_len: usize) -> bool {
 
 fn convert_str_to_bool(value: &str) -> bool {
     value.eq_ignore_ascii_case("true")
+}
+
+fn convert_str_to_number<T:FromStr>(value: &str, default: T) -> T {
+    String::from(value).parse::<T>().unwrap_or(default)
+}
+
+
+fn convert_str_to_json(value: &str) -> Value {
+    serde_json::from_str::<Value>(value).unwrap_or(json!(null))
 }
 
 impl Cli {
@@ -59,8 +70,9 @@ impl Cli {
                 "get_block_hash_by_number", "get_transaction_by_hash", "get_transaction_by_block_hash_and_index",
                 "get_transaction_by_block_number_and_index", "get_transaction_receipt",
                 "get_pending_transactions", "get_pending_tx_size", "get_code",
-                "get_total_transaction_count", "get_system_config_by_key",
+                "get_total_transaction_count", "call", "get_system_config_by_key",
                 "get_transaction_by_hash_with_proof", "get_transaction_receipt_by_hash_with_proof",
+                "generate_group", "start_group", "stop_group", "remove_group", "recover_group",
                 "query_group_status", "get_node_info", "get_batch_receipts_by_block_number_and_range",
                 "get_batch_receipts_by_block_hash_and_range",
             ],
@@ -223,6 +235,12 @@ impl Cli {
                     service.get_total_transaction_count()
                 )).await;
             },
+            "call" => {
+                if valid_args_len(command_parts_length, 1) {
+                    let params = convert_str_to_json(command_parts[1]);
+                    self.call_web3_service(|service| Box::pin(service.call(&params))).await;
+                }
+            },
             "get_system_config_by_key" => {
                 if valid_args_len(command_parts_length, 1) {
                     self.call_web3_service(|service| Box::pin(
@@ -248,6 +266,24 @@ impl Cli {
                     )).await;
                 }
             },
+            "generate_group" => {
+                if valid_args_len(command_parts_length, 1) {
+                    let params = convert_str_to_json(command_parts[1]);
+                    self.call_web3_service(|service| Box::pin(service.generate_group(&params))).await;
+                }
+            },
+            "start_group" => {
+                self.call_web3_service(|service| Box::pin(service.start_group())).await;
+            },
+            "stop_group" => {
+                self.call_web3_service(|service| Box::pin(service.stop_group())).await;
+            },
+            "remove_group" => {
+                self.call_web3_service(|service| Box::pin(service.remove_group())).await;
+            },
+            "recover_group" => {
+                self.call_web3_service(|service| Box::pin(service.recover_group())).await;
+            },
             "query_group_status" => {
                 self.call_web3_service(|service| Box::pin(
                     service.query_group_status()
@@ -263,8 +299,8 @@ impl Cli {
                     self.call_web3_service(|service| Box::pin(
                         service.get_batch_receipts_by_block_number_and_range(
                             command_parts[1],
-                            String::from(command_parts[2]).parse::<u32>().unwrap(),
-                            String::from(command_parts[3]).parse::<i32>().unwrap(),
+                            convert_str_to_number::<u32>(command_parts[2], 0),
+                            convert_str_to_number::<i32>(command_parts[2], -1),
                             convert_str_to_bool(command_parts[4]),
                         )
                     )).await;
@@ -275,8 +311,8 @@ impl Cli {
                     self.call_web3_service(|service| Box::pin(
                         service.get_batch_receipts_by_block_hash_and_range(
                             command_parts[1],
-                            String::from(command_parts[2]).parse::<u32>().unwrap(),
-                            String::from(command_parts[3]).parse::<i32>().unwrap(),
+                            convert_str_to_number::<u32>(command_parts[2], 0),
+                            convert_str_to_number::<i32>(command_parts[2], -1),
                             convert_str_to_bool(command_parts[4]),
                         )
                     )).await;

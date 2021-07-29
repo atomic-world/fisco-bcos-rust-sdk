@@ -107,6 +107,7 @@ dependencies = [
  "futures",
  "home",
  "rustyline",
+ "serde_json",
  "tokio",
 ]
 
