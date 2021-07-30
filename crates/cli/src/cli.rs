@@ -69,13 +69,13 @@ impl Cli {
                 "get_node_id_list", "get_group_list", "get_block_by_hash",
                 "get_block_by_number", "get_block_header_by_hash", "get_block_header_by_number",
                 "get_block_hash_by_number", "get_transaction_by_hash", "get_transaction_by_block_hash_and_index",
-                "get_transaction_by_block_number_and_index", "get_transaction_receipt",
-                "get_pending_transactions", "get_pending_tx_size", "get_code",
-                "get_total_transaction_count", "call", "get_system_config_by_key",
-                "get_transaction_by_hash_with_proof", "get_transaction_receipt_by_hash_with_proof",
-                "generate_group", "start_group", "stop_group", "remove_group", "recover_group",
-                "query_group_status", "get_node_info", "get_batch_receipts_by_block_number_and_range",
-                "get_batch_receipts_by_block_hash_and_range",
+                "get_transaction_by_block_number_and_index", "get_transaction_receipt", "get_pending_transactions",
+                "get_pending_tx_size", "get_code", "get_total_transaction_count",
+                "call", "send_raw_transaction", "send_raw_transaction_and_get_proof",
+                "get_system_config_by_key", "get_transaction_by_hash_with_proof", "get_transaction_receipt_by_hash_with_proof",
+                "generate_group", "start_group", "stop_group",
+                "remove_group", "recover_group", "query_group_status",
+                "get_node_info", "get_batch_receipts_by_block_number_and_range", "get_batch_receipts_by_block_hash_and_range",
             ],
         );
         println!("3. Type help to get help");
@@ -240,6 +240,20 @@ impl Cli {
                 if valid_args_len(command_parts_length, 1) {
                     let params = convert_str_to_json(command_parts[1]);
                     self.call_web3_service(|service| Box::pin(service.call(&params))).await;
+                }
+            },
+            "send_raw_transaction" => {
+                if valid_args_len(command_parts_length, 1) {
+                    self.call_web3_service(|service| Box::pin(
+                        service.send_raw_transaction(command_parts[1])
+                    )).await;
+                }
+            },
+            "send_raw_transaction_and_get_proof" => {
+                if valid_args_len(command_parts_length, 1) {
+                    self.call_web3_service(|service| Box::pin(
+                        service.send_raw_transaction_and_get_proof(command_parts[1])
+                    )).await;
                 }
             },
             "get_system_config_by_key" => {

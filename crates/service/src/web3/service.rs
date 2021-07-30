@@ -215,6 +215,24 @@ impl Service {
         Ok(self.fetcher.fetch(&generate_request_params("call", &request_params)).await?)
     }
 
+    pub async fn send_raw_transaction(&self, signed_transaction_data: &str) -> Result<String, ServiceError> {
+        let params = generate_request_params(
+            "sendRawTransaction",
+            &json!([self.group_id, signed_transaction_data]),
+        );
+        let response = self.fetcher.fetch(&params).await?;
+        Ok(parse_serde_json_string_value(&response))
+    }
+
+    pub async fn send_raw_transaction_and_get_proof(&self, signed_transaction_data: &str) -> Result<String, ServiceError> {
+        let params = generate_request_params(
+            "sendRawTransactionAndGetProof",
+            &json!([self.group_id, signed_transaction_data]),
+        );
+        let response = self.fetcher.fetch(&params).await?;
+        Ok(parse_serde_json_string_value(&response))
+    }
+
     pub async fn get_transaction_by_hash_with_proof(&self, transaction_hash: &str) -> Result<Value, ServiceError> {
         let params = generate_request_params(
             "getTransactionByHashWithProof",
