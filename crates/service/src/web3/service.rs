@@ -200,37 +200,34 @@ impl Service {
         Ok(parse_serde_json_string_value(&response))
     }
 
-    ///
-    /// params 中的属性如下所示：
-    ///
-    /// |  属性名 | 类型 | 备注 |
-    /// |  ----  | ---- | ---- |
-    /// | from | String | 发送者的地址 |
-    /// | to   | String | 接收者的地址 |
-    /// | value | String | 可选，转移的值 |
-    /// | data | String | 可选，编码的参数，编码规范参考 [Ethereum Contract ABI](https://solidity.readthedocs.io/en/develop/abi-spec.html) |
-    ///
-    pub async fn call(&self, params: &Value) -> Result<Value, ServiceError> {
-        let request_params = json!([self.group_id, params.clone()]);
-        Ok(self.fetcher.fetch(&generate_request_params("call", &request_params)).await?)
+    pub async fn call(
+        &self,
+        abi_path: &str,
+        to_address: &str,
+        function_name: &str,
+        params: &Vec<&str>,
+    ) -> Result<Value, ServiceError> {
+        Ok(json!("TO DO"))
     }
 
-    pub async fn send_raw_transaction(&self, signed_transaction_data: &str) -> Result<String, ServiceError> {
-        let params = generate_request_params(
-            "sendRawTransaction",
-            &json!([self.group_id, signed_transaction_data]),
-        );
-        let response = self.fetcher.fetch(&params).await?;
-        Ok(parse_serde_json_string_value(&response))
+    pub async fn send_raw_transaction(
+        &self,
+        abi_path: &str,
+        to_address: &str,
+        function_name: &str,
+        params: &Vec<&str>,
+    ) -> Result<String, ServiceError> {
+        Ok(json!("TO DO").to_string())
     }
 
-    pub async fn send_raw_transaction_and_get_proof(&self, signed_transaction_data: &str) -> Result<String, ServiceError> {
-        let params = generate_request_params(
-            "sendRawTransactionAndGetProof",
-            &json!([self.group_id, signed_transaction_data]),
-        );
-        let response = self.fetcher.fetch(&params).await?;
-        Ok(parse_serde_json_string_value(&response))
+    pub async fn send_raw_transaction_and_get_proof(
+        &self,
+        abi_path: &str,
+        to_address: &str,
+        function_name: &str,
+        params: &Vec<&str>,
+    ) -> Result<String, ServiceError> {
+        Ok(json!("TO DO").to_string())
     }
 
     pub async fn get_transaction_by_hash_with_proof(&self, transaction_hash: &str) -> Result<Value, ServiceError> {

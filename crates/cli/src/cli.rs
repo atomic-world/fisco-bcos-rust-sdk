@@ -14,7 +14,7 @@ pub(crate) struct Cli {
 
 fn valid_args_len(command_parts_length: usize, min_len: usize) -> bool {
     if command_parts_length - 1 < min_len {
-        println!("\nArgument count should be {:}\n", min_len);
+        println!("\nArgument count should not less than {:}\n", min_len);
         false
     } else {
         true
@@ -237,22 +237,53 @@ impl Cli {
                 )).await;
             },
             "call" => {
-                if valid_args_len(command_parts_length, 1) {
-                    let params = convert_str_to_json(command_parts[1]);
-                    self.call_web3_service(|service| Box::pin(service.call(&params))).await;
+                if valid_args_len(command_parts_length, 3) {
+                    let params: Vec<&str> = if command_parts_length > 3 {
+                        command_parts[4..].to_vec()
+                    } else {
+                        vec![]
+                    };
+                    self.call_web3_service(|service| Box::pin(
+                        service.call(
+                            command_parts[1],
+                            command_parts[2],
+                            command_parts[3],
+                            &params,
+                        ))
+                    ).await;
                 }
             },
             "send_raw_transaction" => {
-                if valid_args_len(command_parts_length, 1) {
+                if valid_args_len(command_parts_length, 3) {
+                    let params: Vec<&str> = if command_parts_length > 3 {
+                        command_parts[4..].to_vec()
+                    } else {
+                        vec![]
+                    };
                     self.call_web3_service(|service| Box::pin(
-                        service.send_raw_transaction(command_parts[1])
+                        service.send_raw_transaction(
+                            command_parts[1],
+                            command_parts[2],
+                            command_parts[3],
+                            &params,
+                        )
                     )).await;
                 }
             },
             "send_raw_transaction_and_get_proof" => {
-                if valid_args_len(command_parts_length, 1) {
+                if valid_args_len(command_parts_length, 3) {
+                    let params: Vec<&str> = if command_parts_length > 3 {
+                        command_parts[4..].to_vec()
+                    } else {
+                        vec![]
+                    };
                     self.call_web3_service(|service| Box::pin(
-                        service.send_raw_transaction_and_get_proof(command_parts[1])
+                        service.send_raw_transaction_and_get_proof(
+                            command_parts[1],
+                            command_parts[2],
+                            command_parts[3],
+                            &params,
+                        )
                     )).await;
                 }
             },
