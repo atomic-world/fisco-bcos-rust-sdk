@@ -81,7 +81,7 @@ impl Service {
     }
 
     pub async fn get_node_id_list(&self) -> Result<Vec<String>, ServiceError> {
-        let params = generate_request_params("getGroupPeers", &json!([self.group_id]));
+        let params = generate_request_params("getNodeIDList", &json!([self.group_id]));
         let response = self.fetcher.fetch(&params).await?;
         Ok(parse_serde_json_string_array_value(&response))
     }
@@ -309,7 +309,7 @@ impl Service {
     }
 
     pub async fn get_node_info(&self) -> Result<Value, ServiceError> {
-        let params = generate_request_params("getGroupList", &json!(null));
+        let params = generate_request_params("getNodeInfo", &json!(null));
         Ok(self.fetcher.fetch(&params).await?)
     }
 
