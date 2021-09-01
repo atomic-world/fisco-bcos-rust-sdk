@@ -1,4 +1,5 @@
 use thiserror::Error;
+use crate::account::AccountError;
 
 #[derive(Error, Debug)]
 pub enum ServiceError {
@@ -25,6 +26,9 @@ pub enum ServiceError {
 
     #[error("std::array::TryFromSliceError")]
     TryFromSliceError(#[from] std::array::TryFromSliceError),
+
+    #[error("fisco bcos account error")]
+    FiscoBcosAccountError(#[from] AccountError),
 
     #[error("fisco bcos service error")]
     FiscoBcosError {

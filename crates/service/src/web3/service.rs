@@ -1,4 +1,5 @@
 use serde_json::{Value, json};
+use crate::account::{Account, create_account_from_pem};
 use crate::web3::{fetcher_trait::FetcherTrait, service_error::ServiceError};
 use crate::helpers::{parse_serde_json_string_value, parse_serde_json_string_array_value};
 
@@ -13,12 +14,19 @@ fn generate_request_params(method: &str, params: &Value) -> Value {
 
 pub struct Service {
     group_id: u32,
+    account: Account,
     fetcher: Box<dyn FetcherTrait + Send + Sync>,
 }
 
 impl Service {
-    pub fn new(group_id: u32, fetcher: Box<dyn FetcherTrait + Send + Sync>) -> Service {
-        Service { group_id, fetcher}
+    pub fn new(group_id: u32, pem_file_path: &str, fetcher: Box<dyn FetcherTrait + Send + Sync>) -> Result<Service, ServiceError> {
+        Ok(
+            Service {
+                group_id,
+                fetcher,
+                account: create_account_from_pem(pem_file_path)?,
+            }
+        )
     }
 
     pub async fn get_client_version(&self)  -> Result<Value, ServiceError> {

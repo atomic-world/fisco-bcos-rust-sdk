@@ -1,9 +1,15 @@
 pub mod web3;
+pub mod account;
 mod helpers;
 
 use std::{fs, path::Path};
 use serde_json::Value;
+use account::create_account_from_pem;
 use helpers::parse_serde_json_string_value;
+
+fn get_real_file_path(base_path: &Path, file_path: &Value) -> String {
+    base_path.join(file_path.as_str().unwrap()).into_os_string().into_string().unwrap()
+}
 
 ///
 /// 根据配置文件创建 web3 service 服务实例。
@@ -17,6 +23,7 @@ use helpers::parse_serde_json_string_value;
 ///        "host": "127.0.0.1",
 ///        "port": 8545
 ///    },
+///    "account": "./accounts/alice.pem",
 ///    "authentication": {
 ///        "key": "./sdk.key",
 ///        "cert": "./sdk.crt",
@@ -34,25 +41,20 @@ pub fn create_web3_service(config_file_path: &str) -> Result<web3::service::Serv
     let node = &config["node"];
     let host = node["host"].as_str().unwrap();
     let port = node["port"].as_u64().unwrap() as i32;
+    let config_dir_path= config_path.parent().unwrap();
+    let account_pem_path = get_real_file_path(config_dir_path, &config["account"]);
     if parse_serde_json_string_value(&config["service_type"]).eq("rpc") {
         let fetcher = web3::rpc_fetcher::RPCFetcher::new(host, port);
-        Ok(web3::service::Service::new(group_id,Box::new(fetcher)))
+        web3::service::Service::new(group_id, &account_pem_path, Box::new(fetcher))
     } else {
-        let config_dir_path= config_path.parent().unwrap();
         let authentication = &config["authentication"];
         let fetcher = web3::channel_fetcher::ChannelFetcher::new(
             host,
             port,
-            config_dir_path.join(
-                authentication["ca"].as_str().unwrap()
-            ).into_os_string().to_str().unwrap(),
-            config_dir_path.clone().join(
-                authentication["cert"].as_str().unwrap()
-            ).into_os_string().to_str().unwrap(),
-            config_dir_path.clone().join(
-                authentication["key"].as_str().unwrap()
-            ).into_os_string().to_str().unwrap(),
+            &get_real_file_path(config_dir_path, &authentication["ca"]),
+            &get_real_file_path(config_dir_path, &authentication["cert"]),
+            &get_real_file_path(config_dir_path, &authentication["key"]),
         );
-        Ok(web3::service::Service::new(group_id,Box::new(fetcher)))
+        web3::service::Service::new(group_id, &account_pem_path, Box::new(fetcher))
     }
 }
