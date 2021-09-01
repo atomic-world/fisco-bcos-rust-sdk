@@ -31,7 +31,7 @@ pub fn create_account_from_pem(pem_file_path: &str) -> Result<Account, AccountEr
     let secp = Secp256k1::new();
     let secret_key = SecretKey::from_slice(&private_key)?;
     let public_key = PublicKey::from_secret_key(&secp, &secret_key).serialize_uncompressed().to_vec();
-    let public_key_hash= if public_key.len() == 65 {
+    let public_key_hash = if public_key.len() == 65 {
         Vec::from(keccak(&public_key[1..]).as_bytes()) // 去掉压缩标记
     } else {
         Vec::from(keccak(&public_key).as_bytes())
