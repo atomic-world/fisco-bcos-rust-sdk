@@ -1,4 +1,5 @@
 use serde_json::{Value, json};
+use crate::abi::ABI;
 use crate::account::{Account, create_account_from_pem};
 use crate::web3::{fetcher_trait::FetcherTrait, service_error::ServiceError};
 use crate::helpers::{parse_serde_json_string_value, parse_serde_json_string_array_value};
@@ -213,9 +214,17 @@ impl Service {
         abi_path: &str,
         to_address: &str,
         function_name: &str,
-        params: &Vec<&str>,
+        params: &Vec<String>,
     ) -> Result<Value, ServiceError> {
-        Ok(json!("TO DO"))
+        let abi = ABI::new(abi_path)?;
+        let transaction_data = abi.encode_input(function_name, params)?;
+        let params = json!({
+            "from": format!("0x{}", hex::encode(&self.account.address)),
+            "to": to_address.to_owned(),
+            "value": "0x0",
+            "data": format!("0x{}", hex::encode(&transaction_data)),
+        });
+        Ok(self.fetcher.fetch(&generate_request_params("call", &json!([self.group_id, params]))).await?)
     }
 
     pub async fn send_raw_transaction(
@@ -223,7 +232,7 @@ impl Service {
         abi_path: &str,
         to_address: &str,
         function_name: &str,
-        params: &Vec<&str>,
+        params: &Vec<String>,
     ) -> Result<String, ServiceError> {
         Ok(json!("TO DO").to_string())
     }
@@ -233,7 +242,7 @@ impl Service {
         abi_path: &str,
         to_address: &str,
         function_name: &str,
-        params: &Vec<&str>,
+        params: &Vec<String>,
     ) -> Result<String, ServiceError> {
         Ok(json!("TO DO").to_string())
     }

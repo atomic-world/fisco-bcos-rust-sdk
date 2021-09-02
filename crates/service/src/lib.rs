@@ -1,10 +1,10 @@
 pub mod web3;
 pub mod account;
+pub mod abi;
 mod helpers;
 
 use std::{fs, path::Path};
 use serde_json::Value;
-use account::create_account_from_pem;
 use helpers::parse_serde_json_string_value;
 
 fn get_real_file_path(base_path: &Path, file_path: &Value) -> String {
