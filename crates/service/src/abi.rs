@@ -40,7 +40,7 @@ impl ABI {
     }
 
     pub fn decode_output(&self, function_name: &str, value: &str) -> Result<Vec<Token>, ABIError> {
-        let data = hex::decode(value.to_string().trim_start_matches("0x").as_bytes())?;
+        let data = hex::decode(value.to_owned().trim_start_matches("0x").as_bytes())?;
         let function = self.contract.function(&function_name)?;
         Ok(function.decode_output(&data)?)
     }

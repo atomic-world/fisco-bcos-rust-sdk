@@ -2,7 +2,8 @@ use serde_json::{Value, json};
 use crate::abi::ABI;
 use crate::account::{Account, create_account_from_pem};
 use crate::web3::{fetcher_trait::FetcherTrait, service_error::ServiceError};
-use crate::helpers::{parse_serde_json_string_value, parse_serde_json_string_array_value};
+use crate::helpers::{parse_serde_json_string_value, parse_serde_json_string_array_value, convert_hex_str_to_u32};
+use crate::transaction::get_sign_transaction_data;
 
 fn generate_request_params(method: &str, params: &Value) -> Value {
     json!({
@@ -15,15 +16,22 @@ fn generate_request_params(method: &str, params: &Value) -> Value {
 
 pub struct Service {
     group_id: u32,
+    chain_id: u32,
     account: Account,
     fetcher: Box<dyn FetcherTrait + Send + Sync>,
 }
 
 impl Service {
-    pub fn new(group_id: u32, pem_file_path: &str, fetcher: Box<dyn FetcherTrait + Send + Sync>) -> Result<Service, ServiceError> {
+    pub fn new(
+        group_id: u32,
+        chain_id: u32,
+        pem_file_path: &str,
+        fetcher: Box<dyn FetcherTrait + Send + Sync>,
+    ) -> Result<Service, ServiceError> {
         Ok(
             Service {
                 group_id,
+                chain_id,
                 fetcher,
                 account: create_account_from_pem(pem_file_path)?,
             }
@@ -227,6 +235,33 @@ impl Service {
         Ok(self.fetcher.fetch(&generate_request_params("call", &json!([self.group_id, params]))).await?)
     }
 
+    async fn send_transaction(
+        &self,
+        method: &str,
+        abi_path: &str,
+        to_address: &str,
+        function_name: &str,
+        params: &Vec<String>,
+    ) -> Result<String, ServiceError> {
+        let block_number = convert_hex_str_to_u32(&self.get_block_number().await?);
+        let abi = ABI::new(abi_path)?;
+        let transaction_data = get_sign_transaction_data(
+            &self.account,
+            &abi,
+            self.group_id,
+            self.chain_id,
+            block_number + 500,
+            to_address,
+            function_name,
+            params,
+        )?;
+        let params = generate_request_params(
+            method,
+            &json!([self.group_id, format!("0x{}", hex::encode(&transaction_data))]),
+        );
+        Ok(parse_serde_json_string_value(&self.fetcher.fetch(&params).await?))
+    }
+
     pub async fn send_raw_transaction(
         &self,
         abi_path: &str,
@@ -234,7 +269,7 @@ impl Service {
         function_name: &str,
         params: &Vec<String>,
     ) -> Result<String, ServiceError> {
-        Ok(json!("TO DO").to_string())
+        Ok(self.send_transaction("sendRawTransaction", abi_path, to_address, function_name, params).await?)
     }
 
     pub async fn send_raw_transaction_and_get_proof(
@@ -244,7 +279,7 @@ impl Service {
         function_name: &str,
         params: &Vec<String>,
     ) -> Result<String, ServiceError> {
-        Ok(json!("TO DO").to_string())
+        Ok(self.send_transaction("sendRawTransactionAndGetProof", abi_path, to_address, function_name, params).await?)
     }
 
     pub async fn get_transaction_by_hash_with_proof(&self, transaction_hash: &str) -> Result<Value, ServiceError> {

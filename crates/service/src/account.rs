@@ -1,8 +1,8 @@
 use thiserror::Error;
-use keccak_hash::keccak;
 use std::{fs, path::Path};
+use keccak_hash::keccak;
 use openssl::{ ec::{EcKey} };
-use secp256k1::{Secp256k1, SecretKey, PublicKey};
+use wedpr_l_crypto_signature_secp256k1::WedprSecp256k1Recover;
 
 pub struct Account {
     pub private_key: Vec<u8>,
@@ -15,9 +15,6 @@ pub enum AccountError {
     #[error("std::io::Error")]
     StdIOError(#[from] std::io::Error),
 
-    #[error("hyper::Error")]
-    Secp256k1Error(#[from] secp256k1::Error),
-
     #[error("hex::FromHexError")]
     FromHexError(#[from] hex::FromHexError),
 
@@ -28,9 +25,8 @@ pub enum AccountError {
 pub fn create_account_from_pem(pem_file_path: &str) -> Result<Account, AccountError> {
     let pem_data = fs::read(Path::new(pem_file_path))?;
     let private_key = hex::decode(EcKey::private_key_from_pem(&pem_data)?.private_key().to_hex_str()?.to_string())?;
-    let secp = Secp256k1::new();
-    let secret_key = SecretKey::from_slice(&private_key)?;
-    let public_key = PublicKey::from_secret_key(&secp, &secret_key).serialize_uncompressed().to_vec();
+    let secp_256k1_recover = WedprSecp256k1Recover::default();
+    let public_key = secp_256k1_recover.derive_public_key(&private_key).unwrap();
     let public_key_hash = if public_key.len() == 65 {
         Vec::from(keccak(&public_key[1..]).as_bytes()) // 去掉压缩标记
     } else {

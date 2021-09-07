@@ -15,3 +15,7 @@ pub(crate) fn parse_serde_json_string_array_value(value: &Value) -> Vec<String> 
         None => vec![],
     }
 }
+
+pub(crate) fn convert_hex_str_to_u32(hex_str: &str) -> u32 {
+    u32::from_str_radix(hex_str.to_owned().trim_start_matches("0x"), 16).unwrap()
+}
