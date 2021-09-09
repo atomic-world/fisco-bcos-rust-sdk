@@ -1,4 +1,6 @@
+use std::time::{Duration, Instant};
 use serde_json::{Value, json};
+
 use crate::abi::ABI;
 use crate::account::{Account, create_account_from_pem};
 use crate::web3::{fetcher_trait::FetcherTrait, service_error::ServiceError};
@@ -17,6 +19,7 @@ fn generate_request_params(method: &str, params: &Value) -> Value {
 pub struct Service {
     group_id: u32,
     chain_id: u32,
+    timeout_seconds: u64,
     account: Account,
     fetcher: Box<dyn FetcherTrait + Send + Sync>,
 }
@@ -25,6 +28,7 @@ impl Service {
     pub fn new(
         group_id: u32,
         chain_id: u32,
+        timeout_seconds: u64,
         pem_file_path: &str,
         fetcher: Box<dyn FetcherTrait + Send + Sync>,
     ) -> Result<Service, ServiceError> {
@@ -32,6 +36,7 @@ impl Service {
             Service {
                 group_id,
                 chain_id,
+                timeout_seconds,
                 fetcher,
                 account: create_account_from_pem(pem_file_path)?,
             }
@@ -245,15 +250,14 @@ impl Service {
     ) -> Result<String, ServiceError> {
         let block_number = convert_hex_str_to_u32(&self.get_block_number().await?);
         let abi = ABI::new(abi_path)?;
+        let data= abi.encode_input(function_name, params)?;
         let transaction_data = get_sign_transaction_data(
             &self.account,
-            &abi,
             self.group_id,
             self.chain_id,
             block_number + 500,
             to_address,
-            function_name,
-            params,
+            &data
         )?;
         let params = generate_request_params(
             method,
@@ -280,6 +284,47 @@ impl Service {
         params: &Vec<String>,
     ) -> Result<String, ServiceError> {
         Ok(self.send_transaction("sendRawTransactionAndGetProof", abi_path, to_address, function_name, params).await?)
+    }
+
+    pub async fn deploy(&self, abi_bin_path: &str, abi_path: &str, params: &Vec<String>) -> Result<Value, ServiceError> {
+        let block_number = convert_hex_str_to_u32(&self.get_block_number().await?);
+        let abi = ABI::new(abi_path)?;
+        let data = abi.encode_constructor_input(abi_bin_path, params)?;
+        let transaction_data = get_sign_transaction_data(
+            &self.account,
+            self.group_id,
+            self.chain_id,
+            block_number + 500,
+            "",
+            &data
+        )?;
+        let params = generate_request_params(
+            "sendRawTransactionAndGetProof",
+            &json!([self.group_id, format!("0x{}", hex::encode(&transaction_data))]),
+        );
+        let transaction_hash = parse_serde_json_string_value(&self.fetcher.fetch(&params).await?);
+        let start = Instant::now();
+        let timeout_milliseconds = (1000 * self.timeout_seconds) as u128;
+        while Instant::now().duration_since(start).as_millis() < timeout_milliseconds {
+            let transaction_receipt: Value = self.get_transaction_receipt(&transaction_hash).await?;
+            if transaction_receipt.is_null() {
+                tokio::time::sleep(Duration::from_millis(200)).await;
+                continue;
+            }
+            let transaction_receipt = self.get_transaction_receipt(&transaction_hash).await?;
+            return Ok(json!({
+                "status": transaction_receipt["status"],
+                "transactionHash": transaction_receipt["transactionHash"],
+                "contractAddress": transaction_receipt["contractAddress"]
+            }));
+        }
+        Err(ServiceError::FiscoBcosError {
+            code: -1,
+            message: format!(
+                "Contract deployed, but the action for fetching transaction receipt is timeout. Transaction hash is {:?}",
+                transaction_hash
+            ),
+        })
     }
 
     pub async fn get_transaction_by_hash_with_proof(&self, transaction_hash: &str) -> Result<Value, ServiceError> {

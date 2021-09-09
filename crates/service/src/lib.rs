@@ -31,7 +31,8 @@ fn get_real_file_path(base_path: &Path, file_path: &Value) -> String {
 ///        "ca": "./ca.crt"
 ///    },
 ///    "group_id": 1,
-///    "chain_id": 1
+///    "chain_id": 1,
+//     "timeout_seconds": 10
 /// }
 /// ```
 ///
@@ -40,6 +41,7 @@ pub fn create_web3_service(config_file_path: &str) -> Result<web3::service::Serv
     let config: Value = serde_json::from_slice(fs::read(config_path)?.as_slice())?;
     let group_id= config["group_id"].as_u64().unwrap() as u32;
     let chain_id = config["chain_id"].as_u64().unwrap() as u32;
+    let timeout_seconds = config["timeout_seconds"].as_u64().unwrap();
     let node = &config["node"];
     let host = node["host"].as_str().unwrap();
     let port = node["port"].as_u64().unwrap() as i32;
@@ -47,7 +49,13 @@ pub fn create_web3_service(config_file_path: &str) -> Result<web3::service::Serv
     let account_pem_path = get_real_file_path(config_dir_path, &config["account"]);
     if parse_serde_json_string_value(&config["service_type"]).eq("rpc") {
         let fetcher = web3::rpc_fetcher::RPCFetcher::new(host, port);
-        web3::service::Service::new(group_id, chain_id, &account_pem_path, Box::new(fetcher))
+        web3::service::Service::new(
+            group_id,
+            chain_id,
+            timeout_seconds,
+            &account_pem_path,
+            Box::new(fetcher)
+        )
     } else {
         let authentication = &config["authentication"];
         let fetcher = web3::channel_fetcher::ChannelFetcher::new(
@@ -57,6 +65,12 @@ pub fn create_web3_service(config_file_path: &str) -> Result<web3::service::Serv
             &get_real_file_path(config_dir_path, &authentication["cert"]),
             &get_real_file_path(config_dir_path, &authentication["key"]),
         );
-        web3::service::Service::new(group_id, chain_id,  &account_pem_path, Box::new(fetcher))
+        web3::service::Service::new(
+            group_id,
+            chain_id,
+            timeout_seconds,
+            &account_pem_path,
+            Box::new(fetcher)
+        )
     }
 }

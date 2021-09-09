@@ -80,7 +80,7 @@ impl Cli {
                 "get_block_hash_by_number", "get_transaction_by_hash", "get_transaction_by_block_hash_and_index",
                 "get_transaction_by_block_number_and_index", "get_transaction_receipt", "get_pending_transactions",
                 "get_pending_tx_size", "get_code", "get_total_transaction_count",
-                "call", "send_raw_transaction", "send_raw_transaction_and_get_proof",
+                "call", "send_raw_transaction", "send_raw_transaction_and_get_proof", "deploy",
                 "get_system_config_by_key", "get_transaction_by_hash_with_proof", "get_transaction_receipt_by_hash_with_proof",
                 "generate_group", "start_group", "stop_group",
                 "remove_group", "recover_group", "query_group_status",
@@ -301,6 +301,22 @@ impl Cli {
                             command_parts[1],
                             command_parts[2],
                             command_parts[3],
+                            &params,
+                        )
+                    )).await;
+                }
+            },
+            "deploy" => {
+                if valid_args_len(command_parts_length, 2) {
+                    let params: Vec<String> = if command_parts_length > 3 {
+                        command_parts[3..].iter().map(|&v| v.to_owned()).collect()
+                    } else {
+                        vec![]
+                    };
+                    self.call_web3_service(|service| Box::pin(
+                        service.deploy(
+                            command_parts[1],
+                            command_parts[2],
                             &params,
                         )
                     )).await;
