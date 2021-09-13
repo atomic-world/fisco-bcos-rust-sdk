@@ -1,3 +1,4 @@
+use ethabi::Token;
 use std::time::{Duration, Instant};
 use serde_json::{Value, json};
 
@@ -6,7 +7,7 @@ use crate::account::{Account, create_account_from_pem};
 use crate::web3::{fetcher_trait::FetcherTrait, service_error::ServiceError};
 use crate::helpers::{parse_json_string, parse_json_string_array, convert_hex_str_to_u32};
 use crate::transaction::get_sign_transaction_data;
-use ethabi::Token;
+
 
 fn generate_request_params(method: &str, params: &Value) -> Value {
     json!({
