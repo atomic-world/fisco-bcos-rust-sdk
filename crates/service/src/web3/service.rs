@@ -4,8 +4,9 @@ use serde_json::{Value, json};
 use crate::abi::ABI;
 use crate::account::{Account, create_account_from_pem};
 use crate::web3::{fetcher_trait::FetcherTrait, service_error::ServiceError};
-use crate::helpers::{parse_serde_json_string_value, parse_serde_json_string_array_value, convert_hex_str_to_u32};
+use crate::helpers::{parse_json_string, parse_json_string_array, convert_hex_str_to_u32};
 use crate::transaction::get_sign_transaction_data;
+use ethabi::Token;
 
 fn generate_request_params(method: &str, params: &Value) -> Value {
     json!({
@@ -14,6 +15,13 @@ fn generate_request_params(method: &str, params: &Value) -> Value {
         "method": method.to_owned(),
         "params": params.clone(),
     })
+}
+
+#[derive(Debug)]
+pub struct CallResponse {
+    pub current_block_number: String,
+    pub status: String,
+    pub output: Vec<Token>,
 }
 
 pub struct Service {
@@ -51,25 +59,25 @@ impl Service {
     pub async fn get_block_number(&self) -> Result<String, ServiceError> {
         let params = generate_request_params("getBlockNumber", &json!([self.group_id]));
         let response = self.fetcher.fetch(&params).await?;
-        Ok(parse_serde_json_string_value(&response))
+        Ok(parse_json_string(&response))
     }
 
     pub async fn get_pbft_view(&self) -> Result<String, ServiceError> {
         let params = generate_request_params("getPbftView", &json!([self.group_id]));
         let response = self.fetcher.fetch(&params).await?;
-        Ok(parse_serde_json_string_value(&response))
+        Ok(parse_json_string(&response))
     }
 
     pub async fn get_sealer_list(&self) -> Result<Vec<String>, ServiceError> {
         let params = generate_request_params("getSealerList", &json!([self.group_id]));
         let response = self.fetcher.fetch(&params).await?;
-        Ok(parse_serde_json_string_array_value(&response))
+        Ok(parse_json_string_array(&response))
     }
 
     pub async fn get_observer_list(&self) -> Result<Vec<String>, ServiceError> {
         let params = generate_request_params("getObserverList", &json!([self.group_id]));
         let response = self.fetcher.fetch(&params).await?;
-        Ok(parse_serde_json_string_array_value(&response))
+        Ok(parse_json_string_array(&response))
     }
 
     pub async fn get_consensus_status(&self) -> Result<Value, ServiceError> {
@@ -91,19 +99,19 @@ impl Service {
     pub async fn get_group_peers(&self) -> Result<Vec<String>, ServiceError> {
         let params = generate_request_params("getGroupPeers", &json!([self.group_id]));
         let response = self.fetcher.fetch(&params).await?;
-        Ok(parse_serde_json_string_array_value(&response))
+        Ok(parse_json_string_array(&response))
     }
 
     pub async fn get_node_id_list(&self) -> Result<Vec<String>, ServiceError> {
         let params = generate_request_params("getNodeIDList", &json!([self.group_id]));
         let response = self.fetcher.fetch(&params).await?;
-        Ok(parse_serde_json_string_array_value(&response))
+        Ok(parse_json_string_array(&response))
     }
 
     pub async fn get_group_list(&self) -> Result<Vec<String>, ServiceError> {
         let params = generate_request_params("getGroupList", &json!(null));
         let response = self.fetcher.fetch(&params).await?;
-        Ok(parse_serde_json_string_array_value(&response))
+        Ok(parse_json_string_array(&response))
     }
 
     pub async fn get_block_by_hash(&self, block_hash: &str, include_transactions: bool) -> Result<Value, ServiceError> {
@@ -144,7 +152,7 @@ impl Service {
             &json!([self.group_id, block_number]),
         );
         let response = self.fetcher.fetch(&params).await?;
-        Ok(parse_serde_json_string_value(&response))
+        Ok(parse_json_string(&response))
     }
 
     pub async fn get_transaction_by_hash(&self, transaction_hash: &str) -> Result<Value, ServiceError> {
@@ -193,7 +201,7 @@ impl Service {
             &json!([self.group_id]),
         );
         let response = self.fetcher.fetch(&params).await?;
-        Ok(parse_serde_json_string_value(&response))
+        Ok(parse_json_string(&response))
     }
 
     pub async fn get_code(&self, address: &str) -> Result<String, ServiceError> {
@@ -202,7 +210,7 @@ impl Service {
             &json!([self.group_id, address]),
         );
         let response = self.fetcher.fetch(&params).await?;
-        Ok(parse_serde_json_string_value(&response))
+        Ok(parse_json_string(&response))
     }
 
     pub async fn get_total_transaction_count(&self) -> Result<Value, ServiceError> {
@@ -219,7 +227,7 @@ impl Service {
             &json!([self.group_id, key]),
         );
         let response = self.fetcher.fetch(&params).await?;
-        Ok(parse_serde_json_string_value(&response))
+        Ok(parse_json_string(&response))
     }
 
     pub async fn call(
@@ -228,7 +236,7 @@ impl Service {
         to_address: &str,
         function_name: &str,
         params: &Vec<String>,
-    ) -> Result<Value, ServiceError> {
+    ) -> Result<CallResponse, ServiceError> {
         let abi = ABI::new(abi_path)?;
         let transaction_data = abi.encode_input(function_name, params)?;
         let params = json!({
@@ -237,7 +245,14 @@ impl Service {
             "value": "0x0",
             "data": format!("0x{}", hex::encode(&transaction_data)),
         });
-        Ok(self.fetcher.fetch(&generate_request_params("call", &json!([self.group_id, params]))).await?)
+        let response = self.fetcher.fetch(
+            &generate_request_params("call", &json!([self.group_id, params]))
+        ).await?;
+        Ok(CallResponse {
+            status: parse_json_string(&response["status"]),
+            current_block_number: parse_json_string(&response["currentBlockNumber"]),
+            output: abi.decode_output(function_name, &parse_json_string(&response["output"]))?,
+        })
     }
 
     async fn send_transaction(
@@ -263,7 +278,7 @@ impl Service {
             method,
             &json!([self.group_id, format!("0x{}", hex::encode(&transaction_data))]),
         );
-        Ok(parse_serde_json_string_value(&self.fetcher.fetch(&params).await?))
+        Ok(parse_json_string(&self.fetcher.fetch(&params).await?))
     }
 
     pub async fn send_raw_transaction(
@@ -302,7 +317,7 @@ impl Service {
             "sendRawTransactionAndGetProof",
             &json!([self.group_id, format!("0x{}", hex::encode(&transaction_data))]),
         );
-        let transaction_hash = parse_serde_json_string_value(&self.fetcher.fetch(&params).await?);
+        let transaction_hash = parse_json_string(&self.fetcher.fetch(&params).await?);
         let start = Instant::now();
         let timeout_milliseconds = (1000 * self.timeout_seconds) as u128;
         while Instant::now().duration_since(start).as_millis() < timeout_milliseconds {

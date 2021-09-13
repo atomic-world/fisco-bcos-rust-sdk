@@ -2,11 +2,11 @@ pub mod web3;
 pub mod account;
 pub mod abi;
 pub mod transaction;
-mod helpers;
+pub mod helpers;
 
 use std::{fs, path::Path};
 use serde_json::Value;
-use helpers::parse_serde_json_string_value;
+use helpers::parse_json_string;
 
 fn get_real_file_path(base_path: &Path, file_path: &Value) -> String {
     base_path.join(file_path.as_str().unwrap()).into_os_string().into_string().unwrap()
@@ -47,7 +47,7 @@ pub fn create_web3_service(config_file_path: &str) -> Result<web3::service::Serv
     let port = node["port"].as_u64().unwrap() as i32;
     let config_dir_path= config_path.parent().unwrap();
     let account_pem_path = get_real_file_path(config_dir_path, &config["account"]);
-    if parse_serde_json_string_value(&config["service_type"]).eq("rpc") {
+    if parse_json_string(&config["service_type"]).eq("rpc") {
         let fetcher = web3::rpc_fetcher::RPCFetcher::new(host, port);
         web3::service::Service::new(
             group_id,

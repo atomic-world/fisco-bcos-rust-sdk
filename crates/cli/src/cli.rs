@@ -2,7 +2,6 @@ use std::fmt::Debug;
 use std::str::FromStr;
 use serde_json::{json, Value};
 use futures::future::BoxFuture;
-use fisco_bcos_service::abi::ABI;
 use fisco_bcos_service::{
     create_web3_service,
     web3::{service::Service as Web3Service, service_error::ServiceError as Web3ServiceError},
@@ -42,29 +41,20 @@ impl Cli {
         };
     }
 
-    async fn call_web3_service_with_callback<'a, T, F, FC>(&'a self, f: F, callback: FC)
-        where
-            T: Debug,
-            F: FnOnce(&'a Web3Service) -> BoxFuture<'a, Result<T, Web3ServiceError>>,
-            FC: FnOnce(T)
-    {
-        if self.web3_service.is_some() {
-            let web3_service = self.web3_service.as_ref().unwrap();
-            match f(web3_service).await {
-                Ok(data) => callback(data),
-                Err(error) => println!("\nError: {:?}\n", error),
-            };
-        } else {
-            println!("\nError: Please initialize the environment with set_config function first\n");
-        }
-    }
-
     async fn call_web3_service<'a, T, F>(&'a self, f: F)
         where
             T: Debug,
             F: FnOnce(&'a Web3Service) -> BoxFuture<'a, Result<T, Web3ServiceError>>
     {
-        self.call_web3_service_with_callback(f, |data| println!("\n{:?}\n", data)).await;
+        if self.web3_service.is_some() {
+            let web3_service = self.web3_service.as_ref().unwrap();
+            match f(web3_service).await {
+                Ok(data) => println!("\n{:?}\n", data),
+                Err(error) => println!("\nError: {:?}\n", error),
+            };
+        } else {
+            println!("\nError: Please initialize the environment with set_config function first\n");
+        }
     }
 
     fn echo_help(&self) {
@@ -252,24 +242,14 @@ impl Cli {
                     } else {
                         vec![]
                     };
-                    self.call_web3_service_with_callback(
-                        |service| {
-                            Box::pin(
-                                service.call(
-                                    command_parts[1],
-                                    command_parts[2],
-                                    command_parts[3],
-                                    &params,
-                                )
-                            )
-                        },
-                        |data: Value| {
-                            println!("\nStatus: {:?}", data["status"]);
-                            println!("CurrentBlockNumber: {:?}", data["currentBlockNumber"]);
-                            let abi = ABI::new(command_parts[1]).unwrap();
-                            println!("Output: {:?}\n", abi.decode_output(command_parts[3], data["output"].as_str().unwrap()));
-                        }
-                    ).await;
+                    self.call_web3_service(|service| Box::pin(
+                        service.call(
+                            command_parts[1],
+                            command_parts[2],
+                            command_parts[3],
+                            &params,
+                        )
+                    )).await;
                 }
             },
             "send_raw_transaction" => {
