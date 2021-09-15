@@ -4,6 +4,8 @@ use uuid::Uuid;
 use std::convert::TryInto;
 use ethereum_types::{H512, H256, U256};
 use wedpr_l_utils::traits::{Hash, Signature};
+use wedpr_l_crypto_hash_sm3::WedprSm3;
+use wedpr_l_crypto_signature_sm2::WedprSm2p256v1;
 use wedpr_l_crypto_hash_keccak256::WedprKeccak256;
 use wedpr_l_crypto_signature_secp256k1::WedprSecp256k1Recover;
 
@@ -13,6 +15,9 @@ use crate::account::{Account};
 pub enum TransactionError {
     #[error("hex::FromHexError")]
     FromHexError(#[from] hex::FromHexError),
+
+    #[error("std::array::TryFromSliceError")]
+    TryFromSliceError(#[from] std::array::TryFromSliceError),
 }
 
 // 编码规则详见：
@@ -24,6 +29,7 @@ pub fn get_sign_transaction_data(
     block_limit: u32,
     to_address: &str,
     data: &[u8],
+    sm_crypto: bool,
 ) -> Result<Vec<u8>, TransactionError> {
     let nonce = U256::from(Uuid::new_v4().to_string().replace("-", "").as_bytes());
     let gas_price = U256::from(300000000);
@@ -51,20 +57,33 @@ pub fn get_sign_transaction_data(
     stream.append(&group_id);
     stream.append(&extra_data);
     let transaction_encode_data = stream.out().to_vec();
-    let keccak256 = WedprKeccak256::default();
-    let msg_hash = keccak256.hash(&transaction_encode_data);
+    let msg_hash = if sm_crypto {
+        let sm3_hash = WedprSm3::default();
+        sm3_hash.hash(&transaction_encode_data)
+    } else {
+        let keccak256 = WedprKeccak256::default();
+        keccak256.hash(&transaction_encode_data)
+    };
     let tx_hash = H256::from_slice(&msg_hash);
-    let signer = WedprSecp256k1Recover::default();
-    let signature = signer.sign(
-        &account.private_key, &tx_hash.as_bytes().to_vec()
-    ).unwrap();
+    let signature = if sm_crypto {
+        let signer = WedprSm2p256v1::default();
+        signer.sign(&account.private_key, &tx_hash.as_bytes().to_vec()).unwrap()
+    } else {
+        let signer = WedprSecp256k1Recover::default();
+        signer.sign(&account.private_key, &tx_hash.as_bytes().to_vec()).unwrap()
+    };
+
     let r = &signature[0..32];
     let s = &signature[32..64];
-    let val = (&signature[64..])[0] as u64;
-    let v = if val == 4 {
-        4_u64.to_be_bytes().to_vec()
+    let v = if sm_crypto {
+        account.public_key.clone()[0..64].to_vec()
     } else {
-        (val + 27).to_be_bytes().to_vec()
+        let val = (&signature[64..])[0] as u64;
+        if val == 4 {
+            4_u64.to_be_bytes().to_vec()
+        } else {
+            (val + 27).to_be_bytes().to_vec()
+        }
     };
     let mut stream = RlpStream::new();
     stream.begin_list(13);

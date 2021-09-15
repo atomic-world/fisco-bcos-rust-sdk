@@ -44,7 +44,6 @@ impl ChannelFetcher {
 #[async_trait]
 impl FetcherTrait for ChannelFetcher {
     async fn fetch(&self, params: &Value) -> Result<Value, ServiceError> {
-        println!("ca:{:?}", self.ca_file);
         let ca_file_path = Path::new(&self.ca_file);
         let curve = openssl::ec::EcKey::from_curve_name(openssl::nid::Nid::SECP256K1)?;
         let mut ssl_builder = SslConnector::builder(SslMethod::tls())?;

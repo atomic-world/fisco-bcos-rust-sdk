@@ -30,6 +30,7 @@ fn get_real_file_path(base_path: &Path, file_path: &Value) -> String {
 ///        "cert": "./sdk.crt",
 ///        "ca": "./ca.crt"
 ///    },
+///    "sm_crypto": false,
 ///    "group_id": 1,
 ///    "chain_id": 1,
 //     "timeout_seconds": 10
@@ -47,6 +48,8 @@ pub fn create_web3_service(config_file_path: &str) -> Result<web3::service::Serv
     let port = node["port"].as_u64().unwrap() as i32;
     let config_dir_path= config_path.parent().unwrap();
     let account_pem_path = get_real_file_path(config_dir_path, &config["account"]);
+    let sm_crypto = config["sm_crypto"].as_bool().unwrap_or(false);
+
     if parse_json_string(&config["service_type"]).eq("rpc") {
         let fetcher = web3::rpc_fetcher::RPCFetcher::new(host, port);
         web3::service::Service::new(
@@ -54,6 +57,7 @@ pub fn create_web3_service(config_file_path: &str) -> Result<web3::service::Serv
             chain_id,
             timeout_seconds,
             &account_pem_path,
+            sm_crypto,
             Box::new(fetcher)
         )
     } else {
@@ -70,6 +74,7 @@ pub fn create_web3_service(config_file_path: &str) -> Result<web3::service::Serv
             chain_id,
             timeout_seconds,
             &account_pem_path,
+            sm_crypto,
             Box::new(fetcher)
         )
     }
