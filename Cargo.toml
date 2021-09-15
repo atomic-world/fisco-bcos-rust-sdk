@@ -4,6 +4,6 @@ lto = true
 
 [workspace]
 members = [
-  "crates/cli",
-  "crates/service",
+  "./cli",
+  "./service",
 ]
