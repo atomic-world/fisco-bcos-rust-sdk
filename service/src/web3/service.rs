@@ -3,10 +3,10 @@ use std::time::{Duration, Instant};
 use serde_json::{Value as JSONValue, json};
 
 use crate::abi::ABI;
+use crate::transaction::get_sign_transaction_data;
 use crate::account::{Account, create_account_from_pem};
 use crate::web3::{fetcher_trait::FetcherTrait, service_error::ServiceError};
 use crate::helpers::{parse_json_string, parse_json_string_array, convert_hex_str_to_u32};
-use crate::transaction::get_sign_transaction_data;
 
 fn generate_request_params(method: &str, params: &JSONValue) -> JSONValue {
     json!({
@@ -238,10 +238,10 @@ impl Service {
         abi_path: &str,
         to_address: &str,
         function_name: &str,
-        params: &Vec<String>,
+        tokens: &Vec<Token>,
     ) -> Result<CallResponse, ServiceError> {
         let abi = ABI::new(abi_path, self.sm_crypto)?;
-        let transaction_data = abi.encode_input(function_name, params)?;
+        let transaction_data = abi.encode_function_input(function_name, tokens)?;
         let params = json!({
             "from": format!("0x{}", hex::encode(&self.account.address)),
             "to": to_address.to_owned(),
@@ -264,11 +264,11 @@ impl Service {
         abi_path: &str,
         to_address: &str,
         function_name: &str,
-        params: &Vec<String>,
+        tokens: &Vec<Token>,
     ) -> Result<String, ServiceError> {
         let block_number = convert_hex_str_to_u32(&self.get_block_number().await?);
         let abi = ABI::new(abi_path, self.sm_crypto)?;
-        let data= abi.encode_input(function_name, params)?;
+        let data = abi.encode_function_input(function_name, tokens)?;
         let transaction_data = get_sign_transaction_data(
             &self.account,
             self.group_id,
@@ -290,9 +290,9 @@ impl Service {
         abi_path: &str,
         to_address: &str,
         function_name: &str,
-        params: &Vec<String>,
+        tokens: &Vec<Token>,
     ) -> Result<String, ServiceError> {
-        Ok(self.send_transaction("sendRawTransaction", abi_path, to_address, function_name, params).await?)
+        Ok(self.send_transaction("sendRawTransaction", abi_path, to_address, function_name, tokens).await?)
     }
 
     pub async fn send_raw_transaction_and_get_proof(
@@ -300,15 +300,15 @@ impl Service {
         abi_path: &str,
         to_address: &str,
         function_name: &str,
-        params: &Vec<String>,
+        tokens: &Vec<Token>,
     ) -> Result<String, ServiceError> {
-        Ok(self.send_transaction("sendRawTransactionAndGetProof", abi_path, to_address, function_name, params).await?)
+        Ok(self.send_transaction("sendRawTransactionAndGetProof", abi_path, to_address, function_name, tokens).await?)
     }
 
-    pub async fn deploy(&self, abi_bin_path: &str, abi_path: &str, params: &Vec<String>) -> Result<JSONValue, ServiceError> {
+    pub async fn deploy(&self, abi_bin_path: &str, abi_path: &str, tokens: &Vec<Token>) -> Result<JSONValue, ServiceError> {
         let block_number = convert_hex_str_to_u32(&self.get_block_number().await?);
         let abi = ABI::new(abi_path, self.sm_crypto)?;
-        let data = abi.encode_constructor_input(abi_bin_path, params)?;
+        let data = abi.encode_constructor_input(abi_bin_path, tokens)?;
         let transaction_data = get_sign_transaction_data(
             &self.account,
             self.group_id,

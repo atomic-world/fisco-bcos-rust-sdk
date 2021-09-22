@@ -1,15 +1,20 @@
-use std::fmt::Debug;
-use std::str::FromStr;
 use futures::future::BoxFuture;
+use std::{
+    fs,
+    fmt::Debug,
+    str::FromStr,
+};
 use fisco_bcos_service::{
     create_web3_service,
+    ethabi::{
+        Contract, Param,
+        param_type::ParamType,
+        token::{StrictTokenizer, Token, Tokenizer},
+        Error as ETHError,
+    },
     serde_json::{json, Value as JSONValue},
     web3::{service::Service as Web3Service, service_error::ServiceError as Web3ServiceError},
 };
-
-pub(crate) struct Cli {
-    web3_service: Option<Web3Service>,
-}
 
 fn valid_args_len(command_parts_length: usize, min_len: usize) -> bool {
     if command_parts_length - 1 < min_len {
@@ -30,6 +35,32 @@ fn convert_str_to_number<T:FromStr>(value: &str, default: T) -> T {
 
 fn convert_str_to_json(value: &str) -> JSONValue {
     fisco_bcos_service::serde_json::from_str::<JSONValue>(value).unwrap_or(json!(null))
+}
+
+fn get_abi_tokens(inputs: &Vec<Param>, params: &Vec<String>) -> Vec<Token> {
+    let params: Vec<(ParamType, &str)> = inputs.iter()
+        .map(|param| param.kind.clone())
+        .zip(params.iter().map(|v| v as &str)).collect();
+    params.iter()
+        .map(|&(ref param, value)| StrictTokenizer::tokenize(param, value))
+        .collect::<Result<Vec<Token>, ETHError>>().unwrap()
+}
+
+fn get_abi_function_tokens(abi_path: &str, function_name: &str, params: &Vec<String>) -> Vec<Token> {
+    let contract = Contract::load(fs::File::open(abi_path).unwrap()).unwrap();
+    let function = contract.function(&function_name).unwrap();
+    get_abi_tokens(&function.inputs, params)
+}
+
+fn get_abi_constructor_tokens(abi_path: &str, params: &Vec<String>) -> Vec<Token> {
+    let contract = Contract::load(fs::File::open(abi_path).unwrap()).unwrap();
+    let constructor = contract.constructor.as_ref().unwrap();
+    get_abi_tokens(&constructor.inputs, params)
+}
+
+
+pub(crate) struct Cli {
+    web3_service: Option<Web3Service>,
 }
 
 impl Cli {
@@ -241,12 +272,13 @@ impl Cli {
                     } else {
                         vec![]
                     };
+                    let tokens = get_abi_function_tokens(command_parts[1], command_parts[3], &params);
                     self.call_web3_service(|service| Box::pin(
                         service.call(
                             command_parts[1],
                             command_parts[2],
                             command_parts[3],
-                            &params,
+                            &tokens,
                         )
                     )).await;
                 }
@@ -258,12 +290,13 @@ impl Cli {
                     } else {
                         vec![]
                     };
+                    let tokens = get_abi_function_tokens(command_parts[1], command_parts[3], &params);
                     self.call_web3_service(|service| Box::pin(
                         service.send_raw_transaction(
                             command_parts[1],
                             command_parts[2],
                             command_parts[3],
-                            &params,
+                            &tokens,
                         )
                     )).await;
                 }
@@ -275,12 +308,13 @@ impl Cli {
                     } else {
                         vec![]
                     };
+                    let tokens = get_abi_function_tokens(command_parts[1], command_parts[3], &params);
                     self.call_web3_service(|service| Box::pin(
                         service.send_raw_transaction_and_get_proof(
                             command_parts[1],
                             command_parts[2],
                             command_parts[3],
-                            &params,
+                            &tokens,
                         )
                     )).await;
                 }
@@ -292,11 +326,12 @@ impl Cli {
                     } else {
                         vec![]
                     };
+                    let tokens = get_abi_constructor_tokens(command_parts[2], &params);
                     self.call_web3_service(|service| Box::pin(
                         service.deploy(
                             command_parts[1],
                             command_parts[2],
-                            &params,
+                            &tokens,
                         )
                     )).await;
                 }

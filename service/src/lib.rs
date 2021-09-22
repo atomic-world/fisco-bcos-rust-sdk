@@ -3,6 +3,7 @@ pub mod account;
 pub mod abi;
 pub mod transaction;
 pub mod helpers;
+pub use ethabi;
 pub use serde_json;
 
 use std::{fs, path::Path};
