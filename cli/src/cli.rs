@@ -1,9 +1,9 @@
 use std::fmt::Debug;
 use std::str::FromStr;
-use serde_json::{json, Value};
 use futures::future::BoxFuture;
 use fisco_bcos_service::{
     create_web3_service,
+    serde_json::{json, Value as JSONValue},
     web3::{service::Service as Web3Service, service_error::ServiceError as Web3ServiceError},
 };
 
@@ -28,9 +28,8 @@ fn convert_str_to_number<T:FromStr>(value: &str, default: T) -> T {
     String::from(value).parse::<T>().unwrap_or(default)
 }
 
-
-fn convert_str_to_json(value: &str) -> Value {
-    serde_json::from_str::<Value>(value).unwrap_or(json!(null))
+fn convert_str_to_json(value: &str) -> JSONValue {
+    fisco_bcos_service::serde_json::from_str::<JSONValue>(value).unwrap_or(json!(null))
 }
 
 impl Cli {

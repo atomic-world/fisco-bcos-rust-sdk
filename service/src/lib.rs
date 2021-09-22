@@ -3,12 +3,19 @@ pub mod account;
 pub mod abi;
 pub mod transaction;
 pub mod helpers;
+pub use serde_json;
 
 use std::{fs, path::Path};
-use serde_json::Value;
+use serde_json::Value as JSONValue;
+use web3::{
+    service::Service as Web3Service,
+    service_error::ServiceError as Web3ServiceError,
+    rpc_fetcher::RPCFetcher as Web3RPCFetcher,
+    channel_fetcher::ChannelFetcher as Web3ChannelFetcher,
+};
 use helpers::parse_json_string;
 
-fn get_real_file_path(base_path: &Path, file_path: &Value) -> String {
+fn get_real_file_path(base_path: &Path, file_path: &JSONValue) -> String {
     base_path.join(file_path.as_str().unwrap()).into_os_string().into_string().unwrap()
 }
 
@@ -37,9 +44,9 @@ fn get_real_file_path(base_path: &Path, file_path: &Value) -> String {
 /// }
 /// ```
 ///
-pub fn create_web3_service(config_file_path: &str) -> Result<web3::service::Service, web3::service_error::ServiceError>  {
+pub fn create_web3_service(config_file_path: &str) -> Result<Web3Service, Web3ServiceError>  {
     let config_path = Path::new(config_file_path);
-    let config: Value = serde_json::from_slice(fs::read(config_path)?.as_slice())?;
+    let config: JSONValue = serde_json::from_slice(fs::read(config_path)?.as_slice())?;
     let group_id= config["group_id"].as_u64().unwrap() as u32;
     let chain_id = config["chain_id"].as_u64().unwrap() as u32;
     let timeout_seconds = config["timeout_seconds"].as_u64().unwrap();
@@ -51,8 +58,8 @@ pub fn create_web3_service(config_file_path: &str) -> Result<web3::service::Serv
     let sm_crypto = config["sm_crypto"].as_bool().unwrap_or(false);
 
     if parse_json_string(&config["service_type"]).eq("rpc") {
-        let fetcher = web3::rpc_fetcher::RPCFetcher::new(host, port);
-        web3::service::Service::new(
+        let fetcher = Web3RPCFetcher::new(host, port);
+        Web3Service::new(
             group_id,
             chain_id,
             timeout_seconds,
@@ -62,14 +69,14 @@ pub fn create_web3_service(config_file_path: &str) -> Result<web3::service::Serv
         )
     } else {
         let authentication = &config["authentication"];
-        let fetcher = web3::channel_fetcher::ChannelFetcher::new(
+        let fetcher = Web3ChannelFetcher::new(
             host,
             port,
             &get_real_file_path(config_dir_path, &authentication["ca"]),
             &get_real_file_path(config_dir_path, &authentication["cert"]),
             &get_real_file_path(config_dir_path, &authentication["key"]),
         );
-        web3::service::Service::new(
+        Web3Service::new(
             group_id,
             chain_id,
             timeout_seconds,

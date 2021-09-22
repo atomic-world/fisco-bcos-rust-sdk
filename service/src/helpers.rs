@@ -1,13 +1,13 @@
-use serde_json::Value;
+use serde_json::Value as JSONValue;
 
-pub fn parse_json_string(value: &Value) -> String {
+pub fn parse_json_string(value: &JSONValue) -> String {
     match value.as_str() {
         Some(value) => value.to_owned(),
         None => String::from(""),
     }
 }
 
-pub fn parse_json_string_array(value: &Value) -> Vec<String> {
+pub fn parse_json_string_array(value: &JSONValue) -> Vec<String> {
     match value.as_array() {
         Some(list) => list.into_iter().map(
             |item| parse_json_string(item)

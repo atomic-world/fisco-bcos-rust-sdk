@@ -1,4 +1,4 @@
-use serde_json::Value;
+use serde_json::Value as JSONValue;
 use async_trait::async_trait;
 use hyper::{Body, Client};
 use hyper::http::{Request, Method};
@@ -20,7 +20,7 @@ impl RPCFetcher {
 
 #[async_trait]
 impl FetcherTrait for RPCFetcher {
-    async fn fetch(&self, params: &Value) -> Result<Value, ServiceError> {
+    async fn fetch(&self, params: &JSONValue) -> Result<JSONValue, ServiceError> {
         let request_body = serde_json::to_string(&params)?;
         let request = Request::builder()
             .method(Method::POST)
@@ -29,7 +29,7 @@ impl FetcherTrait for RPCFetcher {
         let client = Client::new();
         let response = client.request(request).await?;
         let response_body = hyper::body::to_bytes(response.into_body()).await?;
-        let data: Value = serde_json::from_slice(&response_body.to_vec())?;
+        let data: JSONValue = serde_json::from_slice(&response_body.to_vec())?;
         let result = &data["result"];
         let error = &data["error"];
         match error.is_null() {

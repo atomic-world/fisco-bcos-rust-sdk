@@ -1,6 +1,6 @@
 use uuid::Uuid;
 use std::path::Path;
-use serde_json::Value;
+use serde_json::Value as JSONValue;
 use async_trait::async_trait;
 use std::io::{Write, Read};
 use std::net::TcpStream;
@@ -43,7 +43,7 @@ impl ChannelFetcher {
 
 #[async_trait]
 impl FetcherTrait for ChannelFetcher {
-    async fn fetch(&self, params: &Value) -> Result<Value, ServiceError> {
+    async fn fetch(&self, params: &JSONValue) -> Result<JSONValue, ServiceError> {
         let ca_file_path = Path::new(&self.ca_file);
         let curve = openssl::ec::EcKey::from_curve_name(openssl::nid::Nid::SECP256K1)?;
         let mut ssl_builder = SslConnector::builder(SslMethod::tls())?;
@@ -65,7 +65,7 @@ impl FetcherTrait for ChannelFetcher {
         let buffer_size = u32::from_be_bytes(buffer.clone().as_slice().try_into()?) as usize;
         buffer.append(&mut vec![0; buffer_size - 4]);
         ssl_stream.read(&mut buffer[4..])?;
-        let response: Value = serde_json::from_slice(&buffer[42..buffer_size - 1])?;
+        let response: JSONValue = serde_json::from_slice(&buffer[42..buffer_size - 1])?;
         let result = &response["result"];
         let error = &response["error"];
         match error.is_null() {
