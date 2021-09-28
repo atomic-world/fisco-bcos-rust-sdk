@@ -29,7 +29,7 @@ fn get_real_file_path(base_path: &Path, file_path: &JSONValue) -> String {
 ///
 /// 根据配置文件创建 web3 service 服务实例。
 ///
-/// 配置文件格式如下所示：
+/// 完整配置文件格式如下所示：
 ///
 /// ```json
 /// {
@@ -40,9 +40,11 @@ fn get_real_file_path(base_path: &Path, file_path: &JSONValue) -> String {
 ///    },
 ///    "account": "./accounts/alice.pem",
 ///    "authentication": {
-///        "ca_cert": "./authentication/ca.crt",
-///        "sign_cert": "./authentication/sdk.crt",
-///        "sign_key": "./authentication/sdk.key",
+///        "ca_cert": "./authentication/gm/gmca.crt",
+///        "sign_cert": "./authentication/gm/gmsdk.crt",
+///        "sign_key": "./authentication/gm/gmsdk.key",
+///        "enc_key": "./authentication/gm/gmensdk.key",
+///        "enc_cert": "./authentication/gm/gmensdk.crt"
 ///    },
 ///    "sm_crypto": false,
 ///    "group_id": 1,
