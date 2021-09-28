@@ -28,7 +28,7 @@ pub struct Service {
     group_id: u32,
     chain_id: u32,
     sm_crypto: bool,
-    timeout_seconds: u64,
+    timeout_seconds: i64,
     account: Account,
     fetcher: Box<dyn FetcherTrait + Send + Sync>,
 }
@@ -37,7 +37,7 @@ impl Service {
     pub fn new(
         group_id: u32,
         chain_id: u32,
-        timeout_seconds: u64,
+        timeout_seconds: i64,
         account_pem_file_path: &str,
         sm_crypto: bool,
         fetcher: Box<dyn FetcherTrait + Send + Sync>,

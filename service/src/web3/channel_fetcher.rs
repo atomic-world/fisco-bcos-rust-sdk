@@ -1,13 +1,11 @@
 use uuid::Uuid;
-use std::path::Path;
 use serde_json::Value as JSONValue;
 use async_trait::async_trait;
-use std::io::{Write, Read};
-use std::net::TcpStream;
-use openssl::ssl::{SslMethod, SslVerifyMode, SslFiletype, SslConnector, SslStream};
-
-use crate::web3::{fetcher_trait::FetcherTrait, service_error::ServiceError};
 use std::convert::TryInto;
+
+use crate::tassl::TASSL;
+use crate::web3::{fetcher_trait::FetcherTrait, service_error::ServiceError};
+
 
 // 格式详情参见：
 // https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/design/protocol_description.html#channelmessage-v2
@@ -24,19 +22,34 @@ fn pack_channel_message(data: &Vec<u8>) -> Vec<u8> {
 pub struct ChannelFetcher {
     host: String,
     port: i32,
-    ca_file: String,
-    cert_file: String,
-    key_file: String,
+    ca_cert_file: String,
+    sign_cert_file: String,
+    sign_key_file: String,
+    enc_cert_file: String,
+    enc_key_file: String,
+    timeout_seconds: i64,
 }
 
 impl ChannelFetcher {
-    pub fn new(host: &str, port: i32, ca_file: &str, cert_file: &str, key_file: &str) -> ChannelFetcher {
+    pub fn new(
+        host: &str,
+        port: i32,
+        ca_cert_file: &str,
+        sign_key_file: &str,
+        sign_cert_file: &str,
+        enc_key_file: &str,
+        enc_cert_file: &str,
+        timeout_seconds: i64,
+    ) -> ChannelFetcher {
         ChannelFetcher {
             port,
+            timeout_seconds,
             host: host.to_owned(),
-            ca_file: ca_file.to_owned(),
-            cert_file: cert_file.to_owned(),
-            key_file: key_file.to_owned(),
+            ca_cert_file: ca_cert_file.to_owned(),
+            sign_key_file: sign_key_file.to_owned(),
+            sign_cert_file: sign_cert_file.to_owned(),
+            enc_key_file: enc_key_file.to_owned(),
+            enc_cert_file: enc_cert_file.to_owned(),
         }
     }
 }
@@ -44,27 +57,24 @@ impl ChannelFetcher {
 #[async_trait]
 impl FetcherTrait for ChannelFetcher {
     async fn fetch(&self, params: &JSONValue) -> Result<JSONValue, ServiceError> {
-        let ca_file_path = Path::new(&self.ca_file);
-        let curve = openssl::ec::EcKey::from_curve_name(openssl::nid::Nid::SECP256K1)?;
-        let mut ssl_builder = SslConnector::builder(SslMethod::tls())?;
-        ssl_builder.set_verify(SslVerifyMode::NONE);
-        ssl_builder.set_tmp_ecdh(&curve)?;
-        ssl_builder.set_ca_file(ca_file_path)?;
-        ssl_builder.set_certificate_chain_file(&Path::new(&self.cert_file))?;
-        ssl_builder.set_private_key_file(&Path::new(&self.key_file), SslFiletype::PEM)?;
-        let ssl = ssl_builder.build().configure()?.into_ssl(&self.host)?;
-        let tcp_stream = TcpStream::connect(format!("{}:{}", self.host, self.port))?;
-        let mut ssl_stream = SslStream::new(ssl, tcp_stream)?;
-        ssl_stream.connect()?;
-
+        let mut tassl = TASSL::new(self.timeout_seconds);
+        tassl.init();
+        tassl.load_auth_files(
+            &self.ca_cert_file,
+            &self.sign_key_file,
+            &self.sign_cert_file,
+            &self.enc_key_file,
+            &self.enc_cert_file,
+        )?;
+        tassl.connect(&self.host, self.port)?;
         let request_data = pack_channel_message(&serde_json::to_vec(&params)?);
-        ssl_stream.write(&request_data)?;
+        tassl.write(&request_data)?;
 
         let mut buffer:Vec<u8> = vec![0; 4];
-        ssl_stream.read(&mut buffer[0..])?;
+        tassl.read(&mut buffer[0..])?;
         let buffer_size = u32::from_be_bytes(buffer.clone().as_slice().try_into()?) as usize;
         buffer.append(&mut vec![0; buffer_size - 4]);
-        ssl_stream.read(&mut buffer[4..])?;
+        tassl.read(&mut buffer[4..])?;
         let response: JSONValue = serde_json::from_slice(&buffer[42..buffer_size - 1])?;
         let result = &response["result"];
         let error = &response["error"];

@@ -2,6 +2,7 @@ use thiserror::Error;
 use crate::abi::ABIError;
 use crate::account::AccountError;
 use crate::transaction::TransactionError;
+use crate::tassl::TASSLError;
 
 #[derive(Error, Debug)]
 pub enum ServiceError {
@@ -17,17 +18,14 @@ pub enum ServiceError {
     #[error("serde_json::Error")]
     SerdeJsonError(#[from] serde_json::Error),
 
-    #[error("openssl::ssl::Error")]
-    OpenSSLError(#[from] openssl::ssl::Error),
-
-    #[error("openssl::error::ErrorStack")]
-    OpenSSLErrorStack(#[from] openssl::error::ErrorStack),
-
     #[error("std::string::FromUtf8Error")]
     StringFromUtf8Error(#[from] std::string::FromUtf8Error),
 
     #[error("std::array::TryFromSliceError")]
     TryFromSliceError(#[from] std::array::TryFromSliceError),
+
+    #[error("service tassl error")]
+    ServiceTASSLError(#[from] TASSLError),
 
     #[error("service abi error")]
     ServiceABIError(#[from] ABIError),
