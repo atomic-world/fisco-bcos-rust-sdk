@@ -219,19 +219,17 @@ impl TASSL {
             return Ok(0);
         }
         let len = cmp::min(c_int::MAX as usize, buf.len()) as c_int;
-        loop {
-            unsafe {
-                let write_result = parse_ffi_invoke_result(
-                    SSL_write(self.ssl.unwrap(), buf.as_ptr() as *const c_void, len),
-                    "SSL_write invoked failed"
-                );
-                return match write_result {
-                    Ok(v) => Ok(v as usize),
-                    Err(error) => {
-                        SSL_clear(self.ssl.unwrap());
-                        Err(error)
-                    }
-                };
+        unsafe {
+            let write_result = parse_ffi_invoke_result(
+                SSL_write(self.ssl.unwrap(), buf.as_ptr() as *const c_void, len),
+                "SSL_write invoked failed"
+            );
+            match write_result {
+                Ok(v) => Ok(v as usize),
+                Err(error) => {
+                    SSL_clear(self.ssl.unwrap());
+                    Err(error)
+                }
             }
         }
     }
@@ -241,16 +239,14 @@ impl TASSL {
             return Ok(0);
         }
         let len = cmp::min(c_int::MAX as usize, buf.len()) as c_int;
-        loop {
-            unsafe {
-                let read_result = parse_ffi_invoke_result(
-                    SSL_read(self.ssl.unwrap(), buf.as_ptr() as *mut c_void, len),
-                    "SSL_read invoked failed"
-                );
-                return match read_result {
-                    Ok(v) => Ok(v as usize),
-                    Err(error) => Err(error)
-                };
+        unsafe {
+            let read_result = parse_ffi_invoke_result(
+                SSL_read(self.ssl.unwrap(), buf.as_ptr() as *mut c_void, len),
+                "SSL_read invoked failed"
+            );
+            match read_result {
+                Ok(v) => Ok(v as usize),
+                Err(error) => Err(error)
             }
         }
     }
