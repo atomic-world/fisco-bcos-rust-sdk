@@ -21,7 +21,7 @@ fn generate_request_params(method: &str, params: &JSONValue) -> JSONValue {
 pub struct CallResponse {
     pub current_block_number: String,
     pub status: String,
-    pub output: Vec<Token>,
+    pub output: Option<Vec<Token>>,
 }
 
 pub struct Service {

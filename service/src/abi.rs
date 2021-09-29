@@ -8,6 +8,7 @@ use ethabi::{
     token::Token,
     Error as ETHError,
     Result as ETHResult,
+    decode as eth_decode,
     encode as eth_encode,
 };
 
@@ -28,6 +29,11 @@ pub enum ABIError {
 
     #[error("hex::FromHexError")]
     FromHexError(#[from] hex::FromHexError),
+
+    #[error("abi custom error")]
+    CustomError {
+        message: String,
+    }
 }
 
 pub struct ABI {
@@ -65,9 +71,19 @@ impl ABI {
         }
     }
 
-    pub fn decode_output(&self, function_name: &str, value: &str) -> Result<Vec<Token>, ABIError> {
-        let data = hex::decode(value.to_owned().trim_start_matches("0x").as_bytes())?;
+    pub fn decode_output(&self, function_name: &str, value: &str) -> Result<Option<Vec<Token>>, ABIError> {
+        if value.eq("0x") {
+            return Ok(None);
+        }
         let function = self.contract.function(&function_name)?;
-        Ok(function.decode_output(&data)?)
+        if value.starts_with("0x08c379a0") {
+            let output = &value[10..];
+            let data = hex::decode(output.to_owned().as_bytes())?;
+            let params: Vec<ParamType> = vec![ParamType::String];
+            let tokens = eth_decode(&params, &data)?;
+            return Err(ABIError::CustomError { message: tokens[0].to_string() });
+        }
+        let data = hex::decode(value.to_owned().trim_start_matches("0x").as_bytes())?;
+        Ok(Some(function.decode_output(&data)?))
     }
 }
