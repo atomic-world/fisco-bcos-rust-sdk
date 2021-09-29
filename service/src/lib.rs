@@ -20,7 +20,7 @@ use helpers::parse_json_string;
 
 fn get_real_file_path(base_path: &Path, file_path: &JSONValue) -> String {
     if file_path.is_string() {
-        base_path.join(file_path.as_str().unwrap()).display().to_string()
+        fs::canonicalize(base_path.join(file_path.as_str().unwrap())).unwrap().display().to_string()
     } else {
         String::from("")
     }
