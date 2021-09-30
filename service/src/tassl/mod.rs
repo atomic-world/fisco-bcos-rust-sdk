@@ -74,6 +74,8 @@ impl TASSL {
                         CRYPTO_set_id_callback(thread_id);
                     }
                 }
+            } else {
+                fn set_id_callback() {}
             }
         }
         static INIT: Once = Once::new();
