@@ -114,6 +114,12 @@ impl TASSL {
                     self.ctx = Some(SSL_CTX_new(TLSv1_2_client_method()));
                     SSL_CTX_set_timeout(self.ctx.unwrap(), self.timeout_seconds);
                     SSL_CTX_set_mode(self.ctx.unwrap(), SSL_MODE_AUTO_RETRY);
+                    SSL_CTX_set_verify(
+                        self.ctx.unwrap(),
+                        SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                        None
+                    );
+                    SSL_CTX_set_verify_depth(self.ctx.unwrap(), 10);
                     self.ctx.unwrap()
                 }
             };
@@ -175,8 +181,6 @@ impl TASSL {
                 )?;
                 check_enc_private_key = true;
             }
-            SSL_CTX_set_verify(ctx,SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,None);
-            SSL_CTX_set_verify_depth(ctx,10);
             parse_ffi_invoke_result(
                 SSL_CTX_check_private_key(ctx),
                 "SSL_CTX_check_private_key invoked failed"
@@ -252,7 +256,6 @@ impl TASSL {
             }
         }
     }
-
 }
 
 impl Drop for TASSL {
