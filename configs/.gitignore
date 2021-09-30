@@ -1,1 +1,3 @@
 config.json
+contracts/*.bin
+contracts/*.abi
