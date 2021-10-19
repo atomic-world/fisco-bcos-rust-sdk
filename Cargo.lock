@@ -1444,12 +1444,9 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
 name = "tassl-src"
-version = "0.1.2"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c0acce52286f237d40a9f2940620f604798b489e713c44e1bc32a1c9787b320"
-dependencies = [
- "cc",
-]
+checksum = "0c39a9756c7b35b4c01abcf89514d65d636a9899f25308f38d35d12022641958"
 
 [[package]]
 name = "thiserror"
