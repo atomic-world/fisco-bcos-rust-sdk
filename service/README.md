@@ -9,7 +9,7 @@ Rust SDK For FISCO BCOS 2.7.0+
 fisco-bcos-service = "0.1"
 ```
 
-# 使用示例
+# 使用
 
 ## Web3Service
 
