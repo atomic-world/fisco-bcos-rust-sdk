@@ -12,4 +12,4 @@ ____
 
 # License
 
-Rust SDK 的开源协议为 [APACHE LICENSE, VERSION 2.0](https://www.apache.org/licenses/LICENSE-2.0.txt)，详情请参考 [LICENSE](./LICENSE)。
+[Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0.txt)
