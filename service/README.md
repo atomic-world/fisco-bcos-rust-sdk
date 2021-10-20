@@ -78,9 +78,9 @@ let web3_service = create_web3_service(config_file_path).unwrap();
 
 ### API 列表
 
-* 列表详情参见：[https://docs.rs/fisco_bcos_service/0.1.0/web3/service/struct.Service.html](https://docs.rs/fisco_bcos_service/0.1.0/web3/service/struct.Service.html) 。
+* 列表详情参见：[https://docs.rs/fisco_bcos_service/0.1.0/web3/service/struct.Service.html](https://docs.rs/fisco_bcos_service/0.1.0/web3/service/struct.Service.html)。
 
-* 除接口 `call`、`deploy` 的返回值与 FISCO BCOS JSON-RPC 相关方法不一致外，其余方法的返回值结构参见 [FISCO BCOS JSON-RPC](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/api.html) 。
+* 除接口 `call`、`deploy` 的返回值与 FISCO BCOS JSON-RPC 相关方法不一致外，其余方法的返回值结构参见 [FISCO BCOS JSON-RPC](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/api.html)。
 * 接口 `call`、`send_raw_transaction`、`send_raw_transaction_and_get_proof`、`deploy` 中有关 `abi_path`、`abi_bin_path` 为合约编译后的 `abi` 及 `bin` 路径，目前暂不支持自动编译，请通过 [download_solc.sh](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/bin/download_solc.sh) 下载编译器，并手动执行合约编译。
 * 接口 `deploy` 的返回值结构如下所示：
 
@@ -91,7 +91,7 @@ let web3_service = create_web3_service(config_file_path).unwrap();
     "contractAddress": "0x62195d0f77f66c445c4878b845f55d266875705d"
   }
   ```
-* 接口中的 `Token` 实为 `ethabi::token::Token`，具体使用参见 [ethabi token](https://github.com/rust-ethereum/ethabi/blob/v14.1.0/ethabi/src/token/token.rs#L227-L299) ，在使用过程中无需安装 `ethabi` 依赖，只需 `use fisco_bcos_service::ethabi::token::Token` 即可。
+* 接口中的 `Token` 实为 `ethabi::token::Token`，具体使用参见 [ethabi token](https://github.com/rust-ethereum/ethabi/blob/v14.1.0/ethabi/src/token/token.rs#L227-L299)，在使用过程中无需安装 `ethabi` 依赖，只需 `use fisco_bcos_service::ethabi::token::Token` 即可。
 
 # License
 
