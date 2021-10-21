@@ -58,7 +58,6 @@ fn get_abi_constructor_tokens(abi_path: &str, params: &Vec<String>) -> Vec<Token
     get_abi_tokens(&constructor.inputs, params)
 }
 
-
 pub(crate) struct Cli {
     web3_service: Option<Web3Service>,
 }
@@ -117,9 +116,9 @@ impl Cli {
     }
 
     pub(crate) async fn run_command(&mut self, command: &str) {
-        let command_parts: Vec<&str> = command.split_whitespace()
-            .into_iter()
-            .map(|item| item.trim_start_matches("\"").trim_end_matches("\""))
+        let re = fancy_regex::Regex::new(r#"(".+"|'.+'|[^\s]+)"#).unwrap();
+        let command_parts: Vec<&str> = re.find_iter(command)
+            .map(|item| item.unwrap().as_str().trim_start_matches(|v| v == '\"' || v == '\'').trim_end_matches(|v| v == '\"' || v == '\''))
             .collect();
         let command_parts_length = command_parts.len();
         match command_parts[0] {
