@@ -2,12 +2,20 @@
 
 Rust SDK For FISCO BCOS 2.7.0+
 
-# 依赖安装
+# 安装
 
 ```toml
 [dependencies]
 fisco-bcos-service = "0.1"
 ```
+
+此 crate 使用了 [TASSL](https://github.com/jntass/TASSL) 来处理 `TLS` 连接，在 `Linux` 或 `Macos` 下无需做任何额外操作，其他环境下则需要指定以下环境变量：
+
+* `TASSL_LIB_PATH`：lib 库加载路径。
+* `TASSL_INCLUDE_PATH`：头文件检索路径。
+* `TASSL_LIB_KIND`：lib 库类型，可用值为：`static` 或 `dylib`。
+
+在 `Linux` 或 `Macos` 下，如果你已经编译好了 `TASSL`，也可以通过指定以上环境变量来缩短编译时间。
 
 # 使用
 
@@ -92,6 +100,9 @@ let web3_service = create_web3_service(config_file_path).unwrap();
   }
   ```
 * 接口中的 `Token` 实为 `ethabi::token::Token`，具体使用参见 [ethabi token](https://github.com/rust-ethereum/ethabi/blob/v14.1.0/ethabi/src/token/token.rs#L227-L299)，在使用过程中无需安装 `ethabi` 依赖，只需 `use fisco_bcos_service::ethabi::token::Token` 即可。
+
+
+**注：所有接口均为异步调用（使用了 Rust 的 [async](https://rust-lang.github.io/async-book/) 特性）。**
 
 # License
 
