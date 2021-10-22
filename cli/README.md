@@ -57,7 +57,7 @@ Object({"Build Time": String("20210201 10:15:37"), "Build Type": String("Darwin/
 
 `FISCO BCOS service` 交互方法参数信息参见：
 
-* Web3 服务：[https://docs.rs/fisco_bcos_service/0.1.0/web3/service/struct.Service.html](https://docs.rs/fisco_bcos_service/0.1.0/web3/service/struct.Service.html)。
+* [Web3 服务](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/web3/service.rs#L57-L451)。
 
 
 `FISCO BCOS service` 交互方法参数注意事项：

@@ -86,7 +86,7 @@ let web3_service = create_web3_service(config_file_path).unwrap();
 
 ### API 列表
 
-* 列表详情参见：[https://docs.rs/fisco_bcos_service/0.1.0/web3/service/struct.Service.html](https://docs.rs/fisco_bcos_service/0.1.0/web3/service/struct.Service.html)。
+* 列表详情参见：[Web3Service](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/web3/service.rs#L57-L451)。
 
 * 除接口 `call`、`deploy` 的返回值与 FISCO BCOS JSON-RPC 相关方法不一致外，其余方法的返回值结构参见 [FISCO BCOS JSON-RPC](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/api.html)。
 * 接口 `call`、`send_raw_transaction`、`send_raw_transaction_and_get_proof`、`deploy` 中有关 `abi_path`、`abi_bin_path` 为合约编译后的 `abi` 及 `bin` 路径，目前暂不支持自动编译，请通过 [download_solc.sh](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/bin/download_solc.sh) 下载编译器，并手动执行合约编译。
