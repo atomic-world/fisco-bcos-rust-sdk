@@ -19,7 +19,7 @@ $ cargo install --force fisco-bcos-cli
 # 使用
 
 ```shell
-$ cargo fisco-bcos-cli
+$ fisco-bcos-cli
 ```
 
 执行上述命令，你将进入以下交互页面：
