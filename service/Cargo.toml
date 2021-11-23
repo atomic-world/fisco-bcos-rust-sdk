@@ -27,6 +27,7 @@ wedpr_l_crypto_signature_sm2 = "1.1.0"
 wedpr_l_crypto_hash_keccak256 = "1.1.0"
 wedpr_l_crypto_signature_secp256k1 = "1.1.0"
 thiserror = "1.0"
+serde = "1.0"
 serde_json = "1.0"
 async-trait = "0.1.50"
 hyper = { version = "0.14", features = ["full"] }

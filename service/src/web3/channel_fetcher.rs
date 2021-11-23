@@ -3,9 +3,9 @@ use serde_json::Value as JSONValue;
 use async_trait::async_trait;
 use std::convert::TryInto;
 
+use crate::Config;
 use crate::tassl::TASSL;
 use crate::web3::{fetcher_trait::FetcherTrait, service_error::ServiceError};
-
 
 // 格式详情参见：
 // https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/design/protocol_description.html#channelmessage-v2
@@ -20,53 +20,28 @@ fn pack_channel_message(data: &Vec<u8>) -> Vec<u8> {
 }
 
 pub struct ChannelFetcher {
-    host: String,
-    port: i32,
-    ca_cert_file: String,
-    sign_cert_file: String,
-    sign_key_file: String,
-    enc_cert_file: String,
-    enc_key_file: String,
-    timeout_seconds: i64,
+    config: Config,
 }
 
 impl ChannelFetcher {
-    pub fn new(
-        host: &str,
-        port: i32,
-        ca_cert_file: &str,
-        sign_key_file: &str,
-        sign_cert_file: &str,
-        enc_key_file: &str,
-        enc_cert_file: &str,
-        timeout_seconds: i64,
-    ) -> ChannelFetcher {
-        ChannelFetcher {
-            port,
-            timeout_seconds,
-            host: host.to_owned(),
-            ca_cert_file: ca_cert_file.to_owned(),
-            sign_key_file: sign_key_file.to_owned(),
-            sign_cert_file: sign_cert_file.to_owned(),
-            enc_key_file: enc_key_file.to_owned(),
-            enc_cert_file: enc_cert_file.to_owned(),
-        }
+    pub fn new(config: &Config) -> ChannelFetcher {
+        ChannelFetcher { config: config.clone() }
     }
 }
 
 #[async_trait]
 impl FetcherTrait for ChannelFetcher {
     async fn fetch(&self, params: &JSONValue) -> Result<JSONValue, ServiceError> {
-        let mut tassl = TASSL::new(self.timeout_seconds);
+        let mut tassl = TASSL::new(self.config.timeout_seconds);
         tassl.init();
         tassl.load_auth_files(
-            &self.ca_cert_file,
-            &self.sign_key_file,
-            &self.sign_cert_file,
-            &self.enc_key_file,
-            &self.enc_cert_file,
+            &self.config.authentication.ca_cert,
+            &self.config.authentication.sign_key,
+            &self.config.authentication.sign_cert,
+            &self.config.authentication.enc_key,
+            &self.config.authentication.enc_cert,
         )?;
-        tassl.connect(&self.host, self.port)?;
+        tassl.connect(&self.config.node.host, self.config.node.port)?;
         let request_data = pack_channel_message(&serde_json::to_vec(&params)?);
         tassl.write(&request_data)?;
 

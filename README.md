@@ -30,6 +30,9 @@ curl -LO https://github.com/FISCO-BCOS/FISCO-BCOS/releases/download/`curl -s htt
 bash build_chain.sh -l "127.0.0.1:4" -p 30300,20200,8545 -i
 # 启动FISCO BCOS链
 bash nodes/127.0.0.1/start_all.sh
+
+# 将证书文件拷贝至证书配置目录下，此处假设您的证书配置目录为：~/fisco-bcos-rust-sdk/configs/authentication，请根据实际情况进行替换
+cp nodes/127.0.0.1/sdk/* ~/fisco-bcos-rust-sdk/configs/authentication/
 ```
 ## CLI
 
