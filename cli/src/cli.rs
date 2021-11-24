@@ -1,17 +1,14 @@
 use futures::future::BoxFuture;
 use std::{
-    fs,
     fmt::Debug,
     str::FromStr,
 };
+use std::collections::HashMap;
 use fisco_bcos_service::{
     create_web3_service,
-    ethabi::{
-        Contract, Param,
-        param_type::ParamType,
-        token::{StrictTokenizer, Token, Tokenizer},
-        Error as ETHError,
-    },
+    abi::ABI,
+    config::Config,
+    ethabi::token::Token,
     serde_json::{json, Value as JSONValue},
     web3::{service::Service as Web3Service, service_error::ServiceError as Web3ServiceError},
 };
@@ -37,35 +34,60 @@ fn convert_str_to_json(value: &str) -> JSONValue {
     fisco_bcos_service::serde_json::from_str::<JSONValue>(value).unwrap_or(json!(null))
 }
 
-fn get_abi_tokens(inputs: &Vec<Param>, params: &Vec<String>) -> Vec<Token> {
-    let params: Vec<(ParamType, &str)> = inputs.iter()
-        .map(|param| param.kind.clone())
-        .zip(params.iter().map(|v| v as &str)).collect();
-    params.iter()
-        .map(|&(ref param, value)| StrictTokenizer::tokenize(param, value))
-        .collect::<Result<Vec<Token>, ETHError>>().unwrap()
+fn parse_contract_function_tokens(command_parts: &Vec<&str>, config: &Option<Config>) -> Vec<Token> {
+    match config {
+        None => vec![],
+        Some(config) => {
+            let command_parts_length = command_parts.len();
+            let params: Vec<String> = if command_parts_length > 3 {
+                command_parts[4..].iter().map(|&v| v.to_owned()).collect()
+            } else {
+                vec![]
+            };
+            match ABI::new(&config.contract, command_parts[1], config.sm_crypto) {
+                Ok(abi) =>  abi.parse_function_tokens(command_parts[3], &params).unwrap_or(vec![]),
+                Err(error) => {
+                    println!("\nError: {:?}\n", error);
+                    vec![]
+                },
+            }
+        }
+    }
 }
 
-fn get_abi_function_tokens(abi_path: &str, function_name: &str, params: &Vec<String>) -> Vec<Token> {
-    let contract = Contract::load(fs::File::open(abi_path).unwrap()).unwrap();
-    let function = contract.function(&function_name).unwrap();
-    get_abi_tokens(&function.inputs, params)
-}
-
-fn get_abi_constructor_tokens(abi_path: &str, params: &Vec<String>) -> Vec<Token> {
-    let contract = Contract::load(fs::File::open(abi_path).unwrap()).unwrap();
-    let constructor = contract.constructor.as_ref().unwrap();
-    get_abi_tokens(&constructor.inputs, params)
+fn parse_contract_constructor_tokens(command_parts: &Vec<&str>, config: &Option<Config>) -> Vec<Token> {
+    match config {
+        None => vec![],
+        Some(config) => {
+            let command_parts_length = command_parts.len();
+            let params: Vec<String> = if command_parts_length > 2 {
+                command_parts[2..].iter().map(|&v| v.to_owned()).collect()
+            } else {
+                vec![]
+            };
+            match ABI::new(&config.contract, command_parts[1], config.sm_crypto) {
+                Ok(abi) =>   abi.parse_constructor_tokens(&params).unwrap_or(vec![]),
+                Err(error) => {
+                    println!("\nError: {:?}\n", error);
+                    vec![]
+                },
+            }
+        }
+    }
 }
 
 pub(crate) struct Cli {
+    config: Option<Config>,
     web3_service: Option<Web3Service>,
 }
 
 impl Cli {
     fn set_config(&mut self, config_path: &str) {
         match create_web3_service(config_path) {
-            Ok(web3_service) => self.web3_service = Some(web3_service),
+            Ok(web3_service) => {
+                self.config = Some(web3_service.config.clone());
+                self.web3_service = Some(web3_service);
+            },
             Err(error) => println!("\n Web3 Service initialize error: {:?}\n", error),
         };
     }
@@ -99,7 +121,7 @@ impl Cli {
                 "get_block_hash_by_number", "get_transaction_by_hash", "get_transaction_by_block_hash_and_index",
                 "get_transaction_by_block_number_and_index", "get_transaction_receipt", "get_pending_transactions",
                 "get_pending_tx_size", "get_code", "get_total_transaction_count",
-                "call", "send_raw_transaction", "send_raw_transaction_and_get_proof", "deploy",
+                "call", "send_raw_transaction", "send_raw_transaction_and_get_proof", "deploy", "compile",
                 "get_system_config_by_key", "get_transaction_by_hash_with_proof", "get_transaction_receipt_by_hash_with_proof",
                 "generate_group", "start_group", "stop_group",
                 "remove_group", "recover_group", "query_group_status",
@@ -112,7 +134,7 @@ impl Cli {
     }
 
     pub(crate) fn new() -> Cli {
-        Cli {  web3_service: None }
+        Cli { config: None, web3_service: None }
     }
 
     pub(crate) async fn run_command(&mut self, command: &str) {
@@ -266,12 +288,7 @@ impl Cli {
             },
             "call" => {
                 if valid_args_len(command_parts_length, 3) {
-                    let params: Vec<String> = if command_parts_length > 3 {
-                        command_parts[4..].iter().map(|&v| v.to_owned()).collect()
-                    } else {
-                        vec![]
-                    };
-                    let tokens = get_abi_function_tokens(command_parts[1], command_parts[3], &params);
+                    let tokens = parse_contract_function_tokens(&command_parts, &self.config);
                     self.call_web3_service(|service| Box::pin(
                         service.call(
                             command_parts[1],
@@ -284,12 +301,7 @@ impl Cli {
             },
             "send_raw_transaction" => {
                 if valid_args_len(command_parts_length, 3) {
-                    let params: Vec<String> = if command_parts_length > 3 {
-                        command_parts[4..].iter().map(|&v| v.to_owned()).collect()
-                    } else {
-                        vec![]
-                    };
-                    let tokens = get_abi_function_tokens(command_parts[1], command_parts[3], &params);
+                    let tokens = parse_contract_function_tokens(&command_parts, &self.config);
                     self.call_web3_service(|service| Box::pin(
                         service.send_raw_transaction(
                             command_parts[1],
@@ -302,12 +314,7 @@ impl Cli {
             },
             "send_raw_transaction_and_get_proof" => {
                 if valid_args_len(command_parts_length, 3) {
-                    let params: Vec<String> = if command_parts_length > 3 {
-                        command_parts[4..].iter().map(|&v| v.to_owned()).collect()
-                    } else {
-                        vec![]
-                    };
-                    let tokens = get_abi_function_tokens(command_parts[1], command_parts[3], &params);
+                    let tokens = parse_contract_function_tokens(&command_parts, &self.config);
                     self.call_web3_service(|service| Box::pin(
                         service.send_raw_transaction_and_get_proof(
                             command_parts[1],
@@ -319,19 +326,25 @@ impl Cli {
                 }
             },
             "deploy" => {
-                if valid_args_len(command_parts_length, 2) {
-                    let params: Vec<String> = if command_parts_length > 3 {
-                        command_parts[3..].iter().map(|&v| v.to_owned()).collect()
-                    } else {
-                        vec![]
-                    };
-                    let tokens = get_abi_constructor_tokens(command_parts[2], &params);
+                if valid_args_len(command_parts_length, 1) {
+                    let tokens = parse_contract_constructor_tokens(&command_parts, &self.config);
                     self.call_web3_service(|service| Box::pin(
                         service.deploy(
                             command_parts[1],
-                            command_parts[2],
                             &tokens,
                         )
+                    )).await;
+                }
+            },
+            "compile" => {
+                if valid_args_len(command_parts_length, 1) {
+                    let link_libraries: Option<HashMap<String, String>> = if command_parts_length > 2 {
+                        Some(fisco_bcos_service::serde_json::from_str::<HashMap<String, String>>(command_parts[2]).unwrap())
+                    } else {
+                        None
+                    };
+                    self.call_web3_service(|service| Box::pin(
+                        service.compile(command_parts[1], &link_libraries)
                     )).await;
                 }
             },

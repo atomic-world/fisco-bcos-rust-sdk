@@ -1,9 +1,10 @@
 use ethabi::Token;
+use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use serde_json::{Value as JSONValue, json};
 
-use crate::Config;
 use crate::abi::ABI;
+use crate::config::Config;
 use crate::transaction::get_sign_transaction_data;
 use crate::account::{Account, create_account_from_pem};
 use crate::web3::{fetcher_trait::FetcherTrait, service_error::ServiceError};
@@ -26,12 +27,16 @@ pub struct CallResponse {
 }
 
 pub struct Service {
-    config: Config,
+    pub config: Config,
     account: Account,
     fetcher: Box<dyn FetcherTrait + Send + Sync>,
 }
 
 impl Service {
+    fn get_abi(&self, contract_name: &str) -> Result<ABI, ServiceError> {
+        Ok(ABI::new(&self.config.contract, contract_name, self.config.sm_crypto)?)
+    }
+
     pub fn new(config: &Config, fetcher: Box<dyn FetcherTrait + Send + Sync>) -> Result<Service, ServiceError> {
         Ok(
             Service {
@@ -223,12 +228,12 @@ impl Service {
 
     pub async fn call(
         &self,
-        abi_path: &str,
+        contract_name: &str,
         to_address: &str,
         function_name: &str,
         tokens: &Vec<Token>,
     ) -> Result<CallResponse, ServiceError> {
-        let abi = ABI::new(abi_path, self.config.sm_crypto)?;
+        let abi = self.get_abi(contract_name)?;
         let transaction_data = abi.encode_function_input(function_name, tokens)?;
         let params = json!({
             "from": format!("0x{}", hex::encode(&self.account.address)),
@@ -249,13 +254,13 @@ impl Service {
     async fn send_transaction(
         &self,
         method: &str,
-        abi_path: &str,
+        contract_name: &str,
         to_address: &str,
         function_name: &str,
         tokens: &Vec<Token>,
     ) -> Result<String, ServiceError> {
         let block_number = convert_hex_str_to_u32(&self.get_block_number().await?);
-        let abi = ABI::new(abi_path, self.config.sm_crypto)?;
+        let abi = self.get_abi(contract_name)?;
         let data = abi.encode_function_input(function_name, tokens)?;
         let transaction_data = get_sign_transaction_data(
             &self.account,
@@ -275,28 +280,28 @@ impl Service {
 
     pub async fn send_raw_transaction(
         &self,
-        abi_path: &str,
+        contract_name: &str,
         to_address: &str,
         function_name: &str,
         tokens: &Vec<Token>,
     ) -> Result<String, ServiceError> {
-        Ok(self.send_transaction("sendRawTransaction", abi_path, to_address, function_name, tokens).await?)
+        Ok(self.send_transaction("sendRawTransaction", contract_name, to_address, function_name, tokens).await?)
     }
 
     pub async fn send_raw_transaction_and_get_proof(
         &self,
-        abi_path: &str,
+        contract_name: &str,
         to_address: &str,
         function_name: &str,
         tokens: &Vec<Token>,
     ) -> Result<String, ServiceError> {
-        Ok(self.send_transaction("sendRawTransactionAndGetProof", abi_path, to_address, function_name, tokens).await?)
+        Ok(self.send_transaction("sendRawTransactionAndGetProof", contract_name, to_address, function_name, tokens).await?)
     }
 
-    pub async fn deploy(&self, abi_bin_path: &str, abi_path: &str, tokens: &Vec<Token>) -> Result<JSONValue, ServiceError> {
+    pub async fn deploy(&self, contract_name: &str, tokens: &Vec<Token>) -> Result<JSONValue, ServiceError> {
         let block_number = convert_hex_str_to_u32(&self.get_block_number().await?);
-        let abi = ABI::new(abi_path, self.config.sm_crypto)?;
-        let data = abi.encode_constructor_input(abi_bin_path, tokens)?;
+        let abi = self.get_abi(contract_name)?;
+        let data = abi.encode_constructor_input(tokens)?;
         let transaction_data = get_sign_transaction_data(
             &self.account,
             self.config.group_id,
@@ -333,6 +338,18 @@ impl Service {
                 transaction_hash
             ),
         })
+    }
+
+    ///
+    /// link_libraries 中的键为要链接的 library 的名称，其值为要链接的 library 的地址
+    ///
+    pub async fn compile(
+        &self,
+        contract_name: &str,
+        link_libraries: &Option<HashMap<String, String>>,
+    ) -> Result<(), ServiceError> {
+        let mut abi = self.get_abi(contract_name)?;
+        Ok(abi.compile(link_libraries)?)
     }
 
     pub async fn get_transaction_by_hash_with_proof(&self, transaction_hash: &str) -> Result<JSONValue, ServiceError> {

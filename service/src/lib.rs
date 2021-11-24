@@ -10,7 +10,6 @@ pub use ethabi;
 pub use serde_json;
 
 use std::{fs, path::Path};
-use serde_json::Value as JSONValue;
 use web3::{
     service::Service as Web3Service,
     service_error::ServiceError as Web3ServiceError,
@@ -32,6 +31,11 @@ use config::Config;
 ///        "port": 8545
 ///    },
 ///    "account": "./accounts/alice.pem",
+///    "contract":  {
+///        "solc": "./bin/solc-0.4.25",
+///        "source": "./contracts",
+///        "output": "./contracts/.output"
+///    },
 ///    "authentication": {
 ///        "ca_cert": "./authentication/gm/gmca.crt",
 ///        "sign_cert": "./authentication/gm/gmsdk.crt",
