@@ -44,7 +44,6 @@ pub struct Config {
     pub service_type: String,
     pub node: Node,
     pub contract: Contract,
-    #[serde(default)]
     pub account: String,
     #[serde(default)]
     pub authentication: Authentication,

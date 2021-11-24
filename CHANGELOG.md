@@ -1,3 +1,10 @@
+# 0.2.0 2021-11-24
+
+## Features
+
+* 支持合约编译，可将 Solidity 合约编译成 `abi` 和 `bin` 文件。
+* 优化 Web3Service 中的 `call`、`send_transaction`、`send_raw_transaction`、`deploy` 接口参数（根据合约名称自动获取合约的 `abi` 及 `bin` 信息）。
+
 # 0.1.0 2021-10-22
 
 ## Features

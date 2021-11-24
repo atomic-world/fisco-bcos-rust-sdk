@@ -1,6 +1,6 @@
 [package]
 name = "fisco-bcos-cli"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Tom.Huang <hzlhu.dargon@gmail.com>"]
 edition = "2018"
 license = "Apache-2.0"
@@ -15,7 +15,7 @@ home = "0.5.3"
 futures = "0.3"
 rustyline = "8.2.0"
 tokio = { version = "1", features = ["full"] }
-fisco-bcos-service = { version = "0.1.0", path = "../service" }
+fisco-bcos-service = { version = "0.2.0", path = "../service" }
 
 [[bin]]
 name = "fisco-bcos-cli"
