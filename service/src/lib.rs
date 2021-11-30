@@ -5,6 +5,7 @@ pub mod transaction;
 pub mod helpers;
 pub mod tassl;
 pub mod config;
+pub mod precompiled;
 
 pub use ethabi;
 pub use serde_json;

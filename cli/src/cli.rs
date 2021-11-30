@@ -8,6 +8,7 @@ use fisco_bcos_service::{
     config::Config,
     ethabi::token::Token,
     serde_json::{json, Value as JSONValue},
+    precompiled::system_config_service::SystemConfigService,
     web3::{service::Service as Web3Service, service_error::ServiceError as Web3ServiceError},
 };
 
@@ -92,10 +93,6 @@ impl Cli {
     }
 
     async fn call_web3_service(&self, method: &str, args: &Vec<String>) {
-        if self.web3_service.is_none() {
-            println!("\nError: Please initialize the environment with set_config function first\n");
-            return;
-        }
         let args_length = args.len();
         let web3_service = self.web3_service.as_ref().unwrap();
         let response = match method {
@@ -336,6 +333,23 @@ impl Cli {
         };
     }
 
+    async fn call_system_config_service(&self, args: &Vec<String>) {
+        let args_length = args.len();
+        match valid_args_len(args_length, 2) {
+            Err(error) => println!("\nError: {:?}\n", error),
+            Ok(_) => {
+                let web3_service = self.web3_service.as_ref().unwrap();
+                let system_config_service = SystemConfigService::new(web3_service);
+                let response = system_config_service.set_value_by_key(&args[0], &args[1]).await;
+                match response {
+                    Err(error) => println!("\nError: {:?}\n", error),
+                    _ => {}
+                };
+            }
+        };
+    }
+
+
     fn echo_help(&self) {
         println!("\n1. Use set_config function to initialize the environment(e.g., set_config ./config/config.json)");
         println!(
@@ -354,6 +368,7 @@ impl Cli {
                 "generate_group", "start_group", "stop_group",
                 "remove_group", "recover_group", "query_group_status",
                 "get_node_info", "get_batch_receipts_by_block_number_and_range", "get_batch_receipts_by_block_hash_and_range",
+                "system_config:set_value_key"
             ],
         );
         println!("3. Type help to get help");
@@ -385,7 +400,16 @@ impl Cli {
                     Err(error) => println!("\nError: {:?}\n", error),
                 }
             },
-            _ => self.call_web3_service(method, &args).await,
+            _ => {
+                if self.web3_service.is_none() {
+                    println!("\nError: Please initialize the environment with set_config function first\n");
+                } else {
+                    match method {
+                        "system_config:set_value_by_key" => self.call_system_config_service(&args).await,
+                        _ => self.call_web3_service(method, &args).await
+                    }
+                }
+            },
         };
     }
 }

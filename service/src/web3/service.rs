@@ -38,6 +38,32 @@ impl Service {
         Ok(ABI::new_with_contract_config(&self.config.contract, contract_name, self.config.sm_crypto)?)
     }
 
+    pub(crate) async fn send_transaction_with_abi(
+        &self,
+        method: &str,
+        to_address: &str,
+        abi: &ABI,
+        function_name: &str,
+        tokens: &Vec<Token>,
+    ) -> Result<String, ServiceError> {
+        let block_number = convert_hex_str_to_u32(&self.get_block_number().await?);
+        let data = abi.encode_function_input(function_name, tokens)?;
+        let transaction_data = get_sign_transaction_data(
+            &self.account,
+            self.config.group_id,
+            self.config.chain_id,
+            block_number + 500,
+            to_address,
+            &data,
+            self.config.sm_crypto,
+        )?;
+        let params = generate_request_params(
+            method,
+            &json!([self.config.group_id, format!("0x{}", hex::encode(&transaction_data))]),
+        );
+        Ok(parse_json_string(&self.fetcher.fetch(&params).await?))
+    }
+
     pub fn new(config: &Config, fetcher: Box<dyn FetcherTrait + Send + Sync>) -> Result<Service, ServiceError> {
         Ok(
             Service {
@@ -254,32 +280,6 @@ impl Service {
             current_block_number: parse_json_string(&response["currentBlockNumber"]),
             output: abi.decode_output(function_name, &parse_json_string(&response["output"]))?,
         })
-    }
-
-    pub async fn send_transaction_with_abi(
-        &self,
-        method: &str,
-        to_address: &str,
-        abi: &ABI,
-        function_name: &str,
-        tokens: &Vec<Token>,
-    ) -> Result<String, ServiceError> {
-        let block_number = convert_hex_str_to_u32(&self.get_block_number().await?);
-        let data = abi.encode_function_input(function_name, tokens)?;
-        let transaction_data = get_sign_transaction_data(
-            &self.account,
-            self.config.group_id,
-            self.config.chain_id,
-            block_number + 500,
-            to_address,
-            &data,
-            self.config.sm_crypto,
-        )?;
-        let params = generate_request_params(
-            method,
-            &json!([self.config.group_id, format!("0x{}", hex::encode(&transaction_data))]),
-        );
-        Ok(parse_json_string(&self.fetcher.fetch(&params).await?))
     }
 
     pub async fn send_raw_transaction(

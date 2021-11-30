@@ -46,7 +46,7 @@ cp nodes/127.0.0.1/sdk/* ~/workspace/fisco-bcos-rust-sdk/configs/authentication/
 
 * 支持 AMOP。
 * 支持 event 回调监听。
-* 提供[预编译合约接口](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/design/virtual_machine/precompiled.html)的 Rust API。
+* 提供[预编译合约接口](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html) Rust API。
 
 # License
 
