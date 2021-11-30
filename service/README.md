@@ -19,18 +19,18 @@ fisco-bcos-service = "0.2"
 
 # 使用
 
-## Web3Service
+  * [一、配置](#一配置)
+  * [二、Web3Service](#二Web3Service)
+     * [2.1 实例化](#21-实例化)
+     * [2.2 接口](#22-接口)
+  * [三、SystemConfigService](#三SystemConfigService)
+     * [3.1 实例化](#31-实例化)
+     * [3.2 接口](#32-接口)
+  * [四、注意事项](#四注意事项)
 
-### 通过方法 `create_web3_service` 获得 `Web3Service` 实例
+## 一、配置
 
-```rust
-use fisco_bcos_service::create_web3_service;
-
-let config_file_path = "./configs/config.json";
-let web3_service = create_web3_service(config_file_path).unwrap();
-```
-
-其中 `config_file_path` 为包含以下信息的 `json` 文件路径：
+配置文件为包含以下信息的  `json` 文件：
 
 ```json
 {
@@ -91,19 +91,32 @@ let web3_service = create_web3_service(config_file_path).unwrap();
 
 **注：配置项中 `account`、`contract`、`authentication` 中的路径如果使用相对路径，它的参考路径为该配置文件所在路径。**
 
-### 自行实例化 `Web3Service`
 
-如果你不想通过 `create_web3_service` 创建 `Web3Service` 实例，亦可参照 [create_web3_service](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/lib.rs) 的实现自行实例化。
+## 二、Web3Service
 
-### API 列表
+`Web3Service` 是对 [FISCO BCOS JSON-RPC](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/api.html) 的封装。
+### 2.1 实例化
 
-* 列表详情参见：[Web3Service](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/web3/service.rs)。
+```rust
+use fisco_bcos_service::create_web3_service;
 
-* 除接口 `call`、`deploy`、`compile` 的返回值与 FISCO BCOS JSON-RPC 相关方法不一致外，其余方法的返回值结构参见 [FISCO BCOS JSON-RPC](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/api.html)。
+let config_file_path = "./configs/config.json";
+let web3_service = create_web3_service(config_file_path).unwrap();
+```
 
-* 调用接口 `call`、`send_raw_transaction`、`send_raw_transaction_and_get_proof`、`deploy` 之前，请确保相关合约的 `abi` 及 `bin` 文件已存放在配置属性 `contract.output` 中的指定目录下，你可点击以下链接 [download_solc.sh](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/bin/download_solc.sh) 下载编译器后自行编译，也可调用 `compile` 接口编译。
+### 2.2 接口
 
-* 接口 `deploy` 的返回值结构如下所示：
+* 列表参见：[Web3Service](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/web3/service.rs)。
+* 接口将 [FISCO BCOS JSON-RPC](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/api.html) 返回的 `error` 属性转换成了 `fisco_bcos_service::web3::service_error::ServiceError::FiscoBcosError` 异常抛出，包含以下属性：
+
+    * code：错误类型，详情参见：[错误码描述](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/api.html#id2)
+    * message：错误信息。
+
+* 除 `call` 的返回值结构与相关 JSON-RPC 方法不一致外，其余接口的返回值结构参见 [FISCO BCOS JSON-RPC](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/api.html) 中相关方法返回值中的 `result` 属性。
+
+* 调用 `call`、`send_raw_transaction`、`send_raw_transaction_and_get_proof`、`deploy` 之前，请确保相关合约的 `abi` 及 `bin` 文件已存放在配置属性 `contract.output` 中的指定目录下，你可点击以下链接 [download_solc.sh](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/bin/download_solc.sh) 下载编译器后自行编译，也可调用 `compile` 接口编译。
+
+* `deploy` 的返回值结构如下所示：
 
   ```json
   {
@@ -113,10 +126,33 @@ let web3_service = create_web3_service(config_file_path).unwrap();
   }
   ```
 
-* 接口中的 `Token` 实为 `ethabi::token::Token`，具体使用参见 [ethabi token](https://github.com/rust-ethereum/ethabi/blob/v14.1.0/ethabi/src/token/token.rs#L227-L299)，在使用过程中无需安装 `ethabi` 依赖，只需 `use fisco_bcos_service::ethabi::token::Token` 即可。
+* 接口中的 `Token` 实为 `ethabi::token::Token`，具体使用参见 [ethabi token](https://github.com/rust-ethereum/ethabi/blob/v14.1.0/ethabi/src/token/token.rs#L227-L299)，在使用过程中无需安装 `ethabi` 依赖，只需引用 `fisco_bcos_service::ethabi::token::Token` 即可。
 
 
-**注：所有接口均为异步调用（使用了 Rust 的 [async](https://rust-lang.github.io/async-book/) 特性）。**
+## 三、SystemConfigService
+
+`SystemConfigService` 是对[预编译合约 SystemConfigPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#systemconfigprecompiled-0x1000) 的封装。
+
+### 3.1 实例化
+
+```rust
+use fisco_bcos_service::{
+    create_web3_service,
+    precompiled::system_config_service::SystemConfigService,
+};
+
+let config_file_path = "./configs/config.json";
+let web3_service = create_web3_service(config_file_path).unwrap();
+let system_config_service = SystemConfigService::new(&web3_service);
+```
+
+### 3.2 接口
+
+* `set_value_by_key`：入参详情参见：[setValueByKey](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#setvaluebykey)。
+
+## 四、注意事项
+
+* 所有接口均为异步调用（使用了 Rust 的 [async](https://rust-lang.github.io/async-book/) 特性）。
 
 # License
 
