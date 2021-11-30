@@ -5,7 +5,10 @@ use std::convert::TryInto;
 
 use crate::tassl::TASSL;
 use crate::config::Config;
-use crate::web3::{fetcher_trait::FetcherTrait, service_error::ServiceError};
+use crate::web3::{
+    service_error::ServiceError,
+    fetcher_trait::{FetcherTrait, parse_response},
+};
 
 // 格式详情参见：
 // https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/design/protocol_description.html#channelmessage-v2
@@ -51,17 +54,7 @@ impl FetcherTrait for ChannelFetcher {
         buffer.append(&mut vec![0; buffer_size - 4]);
         tassl.read(&mut buffer[4..])?;
         let response: JSONValue = serde_json::from_slice(&buffer[42..buffer_size - 1])?;
-        let result = &response["result"];
-        let error = &response["error"];
-        match error.is_null() {
-            true => Ok(result.clone()),
-            false => {
-                Err(ServiceError::FiscoBcosError {
-                    code: error["code"].as_i64().unwrap(),
-                    message: error["message"].to_string(),
-                })
-            }
-        }
+        parse_response(&response)
     }
 }
 

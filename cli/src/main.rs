@@ -12,7 +12,7 @@ async fn main() {
     if let Some(path) = home::home_dir() {
         let _ = rl.load_history(path.join(".fisco_bcos_history").as_path());
     }
-    println!("Welcome to cli for FISCO BCOS. Type help to get help");
+    println!("Welcome to Command line tool for FISCO BCOS (V0.2.0). Type help to get help");
     loop {
         let readline = rl.readline(">> ");
         match readline {

@@ -1,12 +1,10 @@
 use std::fs;
-use std::collections::HashMap;
-use std::process::Command;
 use thiserror::Error;
 use wedpr_l_utils::traits::Hash;
 use wedpr_l_crypto_hash_sm3::WedprSm3;
 use ethabi::{
-    Contract, Bytes, Function, Param,
-    param_type::{ParamType, Writer},
+    Bytes, Contract, Function,
+    Param, param_type::{ParamType, Writer},
     token::{StrictTokenizer, Token, Tokenizer},
     Error as ETHError,
     Result as ETHResult,
@@ -34,16 +32,22 @@ pub enum ABIError {
 }
 
 pub struct ABI {
-    contract: Option<Contract>,
-    contract_name: String,
-    contract_config: ContractConfig,
     sm_crypto: bool,
+    contract_name: String,
+    abi_bin: Option<Vec<u8>>,
+    contract: Option<Contract>,
 }
 
 impl ABI {
     fn get_load_contract_error(&self) -> ABIError {
         ABIError::CustomError {
             message: format!("Can't load the contract:{:?}, please compile it first", self.contract_name)
+        }
+    }
+
+    fn get_load_abi_bin_error(&self) -> ABIError {
+        ABIError::CustomError {
+            message: format!("Can't load abi bin for the contract:{:?}, please set it first", self.contract_name)
         }
     }
 
@@ -64,7 +68,7 @@ impl ABI {
         sm3_hash.hash(&data)[..4].to_vec()
     }
 
-    fn encode_sm_input(&self, function: &Function, tokens: &Vec<Token>) -> ETHResult<Bytes> {
+    fn encode_sm_input(&self, function: &Function, tokens: &Vec<Token>) -> ETHResult<Vec<u8>> {
         let params: Vec<ParamType> = function.inputs.iter().map(|p| p.kind.clone()).collect();
         if !Token::types_check(tokens, &params) {
             return Err(ETHError::InvalidData);
@@ -74,64 +78,43 @@ impl ABI {
         Ok(transaction_data)
     }
 
-    pub fn new(contract_config: &ContractConfig, contract_name: &str, sm_crypto: bool) -> Result<ABI, ABIError> {
+    pub fn new_with_contract_config(
+        contract_config: &ContractConfig,
+        contract_name: &str,
+        sm_crypto: bool,
+    ) -> Result<ABI, ABIError> {
         let abi_path = contract_config.get_abi_path(contract_name);
+        let abi = if abi_path.is_file() {
+            Some(fs::read(&abi_path)?)
+        } else {
+            None
+        };
+        let abi_bin_path = contract_config.get_abi_bin_path(contract_name);
+        let abi_bin = if abi_bin_path.is_file() {
+            Some(fs::read(&abi_bin_path)?)
+        } else {
+            None
+        };
+        Ok(ABI::new(&abi, &abi_bin, contract_name, sm_crypto)?)
+    }
+
+    pub fn new(
+        abi: &Option<Vec<u8>>,
+        abi_bin: &Option<Vec<u8>>,
+        contract_name: &str,
+        sm_crypto: bool,
+    ) -> Result<ABI, ABIError> {
         Ok(
             ABI {
                 sm_crypto,
                 contract_name: contract_name.to_owned(),
-                contract_config: contract_config.clone(),
-                contract: if abi_path.is_file() {
-                    Some(Contract::load(fs::File::open(abi_path)?)?)
-                } else {
-                    None
-                }
+                abi_bin: abi_bin.clone(),
+                contract: match abi {
+                    None => None,
+                    Some(abi) => Some(Contract::load(abi.as_slice())?)
+                },
             }
         )
-    }
-
-    ///
-    /// link_libraries 中的键为要链接的 library 的名称，其值为要链接的 library 的地址
-    ///
-    pub fn compile(&mut self, link_libraries: &Option<HashMap<String, String>>) -> Result<(), ABIError> {
-        let contract_path = self.contract_config.get_contract_path(&self.contract_name);
-        if !contract_path.is_file() {
-            return Err(
-                ABIError::CustomError {
-                    message: format!("Can't find the contract:{:?}", self.contract_name)
-                }
-            );
-        }
-
-        let mut compile_command = Command::new(&self.contract_config.solc);
-        let link_libraries: Vec<String> = match link_libraries {
-            None => vec![],
-            Some(link_libraries) => {
-                let mut result: Vec<String> = vec![];
-                for (name, address) in link_libraries  {
-                    result.push(format!("{:?}.sol:{:?}:{:?}", self.contract_name, name, address))
-                }
-                result
-            }
-        };
-        if link_libraries.len() > 0 {
-            compile_command.arg("--libraries");
-            compile_command.arg(link_libraries.join(" "));
-        }
-        compile_command.arg("--overwrite").arg("--abi").arg("--bin").arg("-o");
-        compile_command.arg(self.contract_config.output.clone());
-        compile_command.arg(contract_path);
-        let status = compile_command.status()?;
-        if status.success() {
-            self.contract = Some(Contract::load(fs::File::open(self.contract_config.get_abi_path(&self.contract_name))?)?);
-            Ok(())
-        } else {
-            Err(
-                ABIError::CustomError {
-                    message: format!("Can't compile the contract:{:?}, please try it again later", self.contract_name)
-                }
-            )
-        }
     }
 
     pub fn parse_function_tokens(&self, function_name: &str, params: &Vec<String>) -> Result<Vec<Token>, ABIError> {
@@ -148,7 +131,7 @@ impl ABI {
         match self.contract.as_ref() {
             None => Err(self.get_load_contract_error()),
             Some(contract) => {
-                let constructor= contract.constructor.as_ref().unwrap();
+                let constructor = contract.constructor.as_ref().unwrap();
                 Ok(self.parse_tokens(&constructor.inputs, params)?)
             }
         }
@@ -158,9 +141,14 @@ impl ABI {
         match self.contract.as_ref() {
             None => Err(self.get_load_contract_error()),
             Some(contract) => {
-                let constructor= contract.constructor.as_ref().unwrap();
-                let abi_bin_path = self.contract_config.get_abi_bin_path(&self.contract_name);
-                Ok(hex::decode(Vec::from(constructor.encode_input(fs::read(&abi_bin_path)?, &tokens)?))?)
+                match self.abi_bin.as_ref() {
+                    None => Err(self.get_load_abi_bin_error()),
+                    Some(abi_bin) => {
+                        let constructor = contract.constructor.as_ref().unwrap();
+                        let inputs = constructor.encode_input(Bytes::from(abi_bin.as_slice()), &tokens)?;
+                        Ok(hex::decode(Vec::from(inputs))?)
+                    },
+                }
             }
         }
     }

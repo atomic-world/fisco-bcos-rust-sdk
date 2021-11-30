@@ -1,9 +1,7 @@
-use futures::future::BoxFuture;
 use std::{
-    fmt::Debug,
     str::FromStr,
+    collections::HashMap,
 };
-use std::collections::HashMap;
 use fisco_bcos_service::{
     create_web3_service,
     abi::ABI,
@@ -13,12 +11,13 @@ use fisco_bcos_service::{
     web3::{service::Service as Web3Service, service_error::ServiceError as Web3ServiceError},
 };
 
-fn valid_args_len(command_parts_length: usize, min_len: usize) -> bool {
-    if command_parts_length - 1 < min_len {
-        println!("\nArgument count should not less than {:}\n", min_len);
-        false
+fn valid_args_len(args_length: usize, min_len: usize) -> Result<(), Web3ServiceError> {
+    if args_length < min_len {
+        Err(Web3ServiceError::CustomError {
+            message: format!("Argument count should not less than {:}", min_len),
+        })
     } else {
-        true
+        Ok(())
     }
 }
 
@@ -34,18 +33,18 @@ fn convert_str_to_json(value: &str) -> JSONValue {
     fisco_bcos_service::serde_json::from_str::<JSONValue>(value).unwrap_or(json!(null))
 }
 
-fn parse_contract_function_tokens(command_parts: &Vec<&str>, config: &Option<Config>) -> Vec<Token> {
+fn parse_contract_function_tokens(args: &Vec<String>, config: &Option<Config>) -> Vec<Token> {
     match config {
         None => vec![],
         Some(config) => {
-            let command_parts_length = command_parts.len();
-            let params: Vec<String> = if command_parts_length > 3 {
-                command_parts[4..].iter().map(|&v| v.to_owned()).collect()
+            let args_length = args.len();
+            let params: Vec<String> = if args_length > 3 {
+                Vec::from(&args[3..])
             } else {
                 vec![]
             };
-            match ABI::new(&config.contract, command_parts[1], config.sm_crypto) {
-                Ok(abi) =>  abi.parse_function_tokens(command_parts[3], &params).unwrap_or(vec![]),
+            match ABI::new_with_contract_config(&config.contract, &args[0], config.sm_crypto) {
+                Ok(abi) =>  abi.parse_function_tokens(&args[2], &params).unwrap_or(vec![]),
                 Err(error) => {
                     println!("\nError: {:?}\n", error);
                     vec![]
@@ -55,17 +54,17 @@ fn parse_contract_function_tokens(command_parts: &Vec<&str>, config: &Option<Con
     }
 }
 
-fn parse_contract_constructor_tokens(command_parts: &Vec<&str>, config: &Option<Config>) -> Vec<Token> {
+fn parse_contract_constructor_tokens(args: &Vec<String>, config: &Option<Config>) -> Vec<Token> {
     match config {
         None => vec![],
         Some(config) => {
-            let command_parts_length = command_parts.len();
-            let params: Vec<String> = if command_parts_length > 2 {
-                command_parts[2..].iter().map(|&v| v.to_owned()).collect()
+            let args_length = args.len();
+            let params: Vec<String> = if args_length > 2 {
+                Vec::from(&args[2..])
             } else {
                 vec![]
             };
-            match ABI::new(&config.contract, command_parts[1], config.sm_crypto) {
+            match ABI::new_with_contract_config(&config.contract, &args[0], config.sm_crypto) {
                 Ok(abi) =>   abi.parse_constructor_tokens(&params).unwrap_or(vec![]),
                 Err(error) => {
                     println!("\nError: {:?}\n", error);
@@ -85,33 +84,262 @@ impl Cli {
     fn set_config(&mut self, config_path: &str) {
         match create_web3_service(config_path) {
             Ok(web3_service) => {
-                self.config = Some(web3_service.config.clone());
+                self.config = Some(web3_service.get_config());
                 self.web3_service = Some(web3_service);
             },
             Err(error) => println!("\n Web3 Service initialize error: {:?}\n", error),
         };
     }
 
-    async fn call_web3_service<'a, T, F>(&'a self, f: F)
-        where
-            T: Debug,
-            F: FnOnce(&'a Web3Service) -> BoxFuture<'a, Result<T, Web3ServiceError>>
-    {
-        if self.web3_service.is_some() {
-            let web3_service = self.web3_service.as_ref().unwrap();
-            match f(web3_service).await {
-                Ok(data) => println!("\n{:?}\n", data),
-                Err(error) => println!("\nError: {:?}\n", error),
-            };
-        } else {
+    async fn call_web3_service(&self, method: &str, args: &Vec<String>) {
+        if self.web3_service.is_none() {
             println!("\nError: Please initialize the environment with set_config function first\n");
+            return;
         }
+        let args_length = args.len();
+        let web3_service = self.web3_service.as_ref().unwrap();
+        let response = match method {
+            "get_client_version" => web3_service.get_client_version().await,
+            "get_block_number" => web3_service.get_block_number().await.map(|v| json!(v)),
+            "get_pbft_view" => web3_service.get_pbft_view().await.map(|v| json!(v)),
+            "get_sealer_list" => web3_service.get_sealer_list().await.map(|v| json!(v)),
+            "get_observer_list" => web3_service.get_observer_list().await.map(|v| json!(v)),
+            "get_consensus_status" => web3_service.get_consensus_status().await,
+            "get_sync_status" => web3_service.get_sync_status().await,
+            "get_peers" => web3_service.get_peers().await.map(|v| json!(v)),
+            "get_group_peers" => web3_service.get_group_peers().await.map(|v| json!(v)),
+            "get_node_id_list" => web3_service.get_node_id_list().await.map(|v| json!(v)),
+            "get_group_list" => web3_service.get_group_list().await.map(|v| json!(v)),
+            "get_block_by_hash" => {
+               match valid_args_len(args_length, 2) {
+                   Err(err) => Err(err),
+                   Ok(_) => web3_service.get_block_by_hash(
+                       &args[0],
+                       convert_str_to_bool(&args[1])
+                   ).await,
+               }
+            },
+            "get_block_by_number" => {
+                match valid_args_len(args_length, 2) {
+                    Err(err) => Err(err),
+                    Ok(_) => web3_service.get_block_by_number(
+                        &args[0],
+                        convert_str_to_bool(&args[1])
+                    ).await,
+                }
+            },
+            "get_block_header_by_hash" => {
+                match valid_args_len(args_length, 2) {
+                    Err(err) => Err(err),
+                    Ok(_) => web3_service.get_block_header_by_hash(
+                        &args[0],
+                        convert_str_to_bool(&args[1])
+                    ).await,
+                }
+            },
+            "get_block_header_by_number" => {
+                match valid_args_len(args_length, 2) {
+                    Err(err) => Err(err),
+                    Ok(_) => web3_service.get_block_header_by_number(
+                        &args[0],
+                        convert_str_to_bool(&args[1])
+                    ).await,
+                }
+            },
+            "get_block_hash_by_number" => {
+                match valid_args_len(args_length, 1) {
+                    Err(err) => Err(err),
+                    Ok(_) => web3_service.get_block_hash_by_number(&args[0])
+                        .await.map(|v| json!(v)),
+                }
+            },
+            "get_transaction_by_hash" => {
+                match valid_args_len(args_length, 1) {
+                    Err(err) => Err(err),
+                    Ok(_) => web3_service.get_transaction_by_hash(&args[0]).await,
+                }
+            },
+            "get_transaction_by_block_hash_and_index" => {
+                match valid_args_len(args_length, 2) {
+                    Err(err) => Err(err),
+                    Ok(_) => web3_service.get_transaction_by_block_hash_and_index(
+                        &args[0],
+                        &args[1],
+                    ).await,
+                }
+            },
+            "get_transaction_by_block_number_and_index" => {
+                match valid_args_len(args_length, 2) {
+                    Err(err) => Err(err),
+                    Ok(_) => web3_service.get_transaction_by_block_number_and_index(
+                        &args[0],
+                        &args[1],
+                    ).await,
+                }
+            },
+            "get_transaction_receipt" => {
+                match valid_args_len(args_length, 1) {
+                    Err(err) => Err(err),
+                    Ok(_) => web3_service.get_transaction_receipt(&args[0]).await,
+                }
+            },
+            "get_pending_transactions" => web3_service.get_pending_transactions().await,
+            "get_pending_tx_size" => web3_service.get_pending_tx_size().await.map(|v| json!(v)),
+            "get_code" => {
+                match valid_args_len(args_length, 1) {
+                    Err(err) => Err(err),
+                    Ok(_) => web3_service.get_code(&args[0]).await.map(|v| json!(v)),
+                }
+            },
+            "get_total_transaction_count" => web3_service.get_total_transaction_count().await,
+            "call" => {
+                match valid_args_len(args_length, 3) {
+                    Err(err) => Err(err),
+                    Ok(_) => {
+                        let tokens = parse_contract_function_tokens(args, &self.config);
+                        let response= web3_service.call(
+                            &args[0],
+                            &args[1],
+                            &args[2],
+                            &tokens,
+                        ).await;
+                        match response {
+                            Err(err) => Err(err),
+                            Ok(data) => {
+                                println!("\n{:?}\n", data);
+                                Ok(json!(null))
+                            }
+                        }
+                    },
+                }
+            },
+            "send_raw_transaction" => {
+                match valid_args_len(args_length, 3) {
+                    Err(err) => Err(err),
+                    Ok(_) => {
+                        let tokens = parse_contract_function_tokens(args, &self.config);
+                        web3_service.send_raw_transaction(
+                            &args[0],
+                            &args[1],
+                            &args[2],
+                            &tokens,
+                        ).await.map(|v| json!(v))
+                    },
+                }
+            },
+            "send_raw_transaction_and_get_proof" => {
+                match valid_args_len(args_length, 3) {
+                    Err(err) => Err(err),
+                    Ok(_) => {
+                        let tokens = parse_contract_function_tokens(args, &self.config);
+                        web3_service.send_raw_transaction_and_get_proof(
+                            &args[0],
+                            &args[1],
+                            &args[2],
+                            &tokens,
+                        ).await.map(|v| json!(v))
+                    },
+                }
+            },
+            "deploy" => {
+                match valid_args_len(args_length, 1) {
+                    Err(err) => Err(err),
+                    Ok(_) => {
+                        let tokens = parse_contract_constructor_tokens(args, &self.config);
+                        web3_service.deploy(&args[0], &tokens).await
+                    }
+                }
+            },
+            "compile" => {
+                match valid_args_len(args_length, 1) {
+                    Err(err) => Err(err),
+                    Ok(_) => {
+                        let link_libraries: Option<HashMap<String, String>> = if args_length > 1 {
+                            Some(fisco_bcos_service::serde_json::from_str::<HashMap<String, String>>(&args[1]).unwrap())
+                        } else {
+                            None
+                        };
+                        web3_service.compile(&args[0], &link_libraries).await.map(|_| json!(null))
+                    }
+                }
+            },
+            "get_system_config_by_key" => {
+                match valid_args_len(args_length, 1) {
+                    Err(err) => Err(err),
+                    Ok(_) => web3_service.get_system_config_by_key(&args[0]).await.map(|v| json!(v)),
+                }
+            },
+            "get_transaction_by_hash_with_proof" => {
+                match valid_args_len(args_length, 1) {
+                    Err(err) => Err(err),
+                    Ok(_) => web3_service.get_transaction_by_hash_with_proof(&args[0]).await,
+                }
+            },
+            "get_transaction_receipt_by_hash_with_proof" => {
+                match valid_args_len(args_length, 1) {
+                    Err(err) => Err(err),
+                    Ok(_) => web3_service.get_transaction_receipt_by_hash_with_proof(&args[0]).await,
+                }
+            },
+            "generate_group" => {
+                match valid_args_len(args_length, 1) {
+                    Err(err) => Err(err),
+                    Ok(_) => {
+                        let params = convert_str_to_json(&args[0]);
+                        web3_service.generate_group(&params).await
+                    },
+                }
+            },
+            "start_group" => web3_service.start_group().await,
+            "stop_group" => web3_service.stop_group().await,
+            "remove_group" => web3_service.remove_group().await,
+            "recover_group" => web3_service.recover_group().await,
+            "query_group_status" => web3_service.query_group_status().await,
+            "get_node_info" => web3_service.get_node_info().await,
+            "get_batch_receipts_by_block_number_and_range" => {
+                match valid_args_len(args_length, 4) {
+                    Err(err) => Err(err),
+                    Ok(_) => {
+                        web3_service.get_batch_receipts_by_block_number_and_range(
+                            &args[0],
+                            convert_str_to_number::<u32>(&args[1], 0),
+                            convert_str_to_number::<i32>(&args[2], -1),
+                            convert_str_to_bool(&args[3]),
+                        ).await
+                    },
+                }
+            },
+            "get_batch_receipts_by_block_hash_and_range" => {
+                match valid_args_len(args_length, 4) {
+                    Err(err) => Err(err),
+                    Ok(_) => {
+                        web3_service.get_batch_receipts_by_block_hash_and_range(
+                            &args[0],
+                            convert_str_to_number::<u32>(&args[1], 0),
+                            convert_str_to_number::<i32>(&args[2], -1),
+                            convert_str_to_bool(&args[3]),
+                        ).await
+                    },
+                }
+            },
+            command => Err(Web3ServiceError::CustomError {
+                message: format!("Unavailable command {:?}", command),
+            })
+        };
+        match response {
+            Ok(data) => {
+                if !data.is_null() {
+                    println!("\n{:?}\n", data)
+                }
+            },
+            Err(error) => println!("\nError: {:?}\n", error),
+        };
     }
 
     fn echo_help(&self) {
-        println!("\n1. Use set_config function to initialize the environment(e.g., set_config \"./config/config.json\")");
+        println!("\n1. Use set_config function to initialize the environment(e.g., set_config ./config/config.json)");
         println!(
-            "2. Use the below functions to interact with the FISCO BCOS service: {:?}(e.g., get_block_by_number \"0x0\")",
+            "2. Use the below functions to interact with the FISCO BCOS Service: {:?}(e.g., get_block_by_number 0x0)",
             vec![
                 "get_client_version", "get_block_number", "get_pbft_view",
                 "get_sealer_list", "get_observer_list", "get_consensus_status",
@@ -139,293 +367,25 @@ impl Cli {
 
     pub(crate) async fn run_command(&mut self, command: &str) {
         let re = fancy_regex::Regex::new(r#"(".+"|'.+'|[^\s]+)"#).unwrap();
-        let command_parts: Vec<&str> = re.find_iter(command)
+        let parts: Vec<&str> = re.find_iter(command)
             .map(|item| item.unwrap().as_str().trim_start_matches(|v| v == '\"' || v == '\'').trim_end_matches(|v| v == '\"' || v == '\''))
             .collect();
-        let command_parts_length = command_parts.len();
-        match command_parts[0] {
+        let method = parts[0];
+        let args: Vec<String> = if parts.len() > 1 {
+            parts[1..].iter().map(|&v| v.to_owned()).collect()
+        } else {
+            vec![]
+        };
+        let args_length = args.len();
+        match method {
             "help" => self.echo_help(),
             "set_config" => {
-                if valid_args_len(command_parts_length, 1) {
-                    self.set_config(command_parts[1]);
+                match valid_args_len(args_length, 1) {
+                    Ok(_) => self.set_config(&args[0]),
+                    Err(error) => println!("\nError: {:?}\n", error),
                 }
             },
-            "get_client_version" => {
-                self.call_web3_service(|service| Box::pin(service.get_client_version())).await;
-            },
-            "get_block_number" => {
-                self.call_web3_service(|service| Box::pin(service.get_block_number())).await;
-            },
-            "get_pbft_view" => {
-                self.call_web3_service(|service| Box::pin(service.get_pbft_view())).await;
-            },
-            "get_sealer_list" => {
-                self.call_web3_service(|service| Box::pin(service.get_sealer_list())).await;
-            },
-            "get_observer_list" => {
-                self.call_web3_service(|service| Box::pin(service.get_observer_list())).await;
-            },
-            "get_consensus_status" => {
-                self.call_web3_service(|service| Box::pin(service.get_consensus_status())).await;
-            },
-            "get_sync_status" => {
-                self.call_web3_service(|service| Box::pin(service.get_sync_status())).await;
-            },
-            "get_peers" => {
-                self.call_web3_service(|service| Box::pin(service.get_peers())).await;
-            },
-            "get_group_peers" => {
-                self.call_web3_service(|service| Box::pin(service.get_group_peers())).await;
-            },
-            "get_node_id_list" => {
-                self.call_web3_service(|service| Box::pin(service.get_node_id_list())).await;
-            },
-            "get_group_list" => {
-                self.call_web3_service(|service| Box::pin(service.get_group_list())).await;
-            },
-            "get_block_by_hash" => {
-                if valid_args_len(command_parts_length, 2) {
-                    self.call_web3_service(|service| Box::pin(
-                        service.get_block_by_hash(
-                            command_parts[1],
-                            convert_str_to_bool(command_parts[2]),
-                        )
-                    )).await;
-                }
-            },
-            "get_block_by_number" => {
-                if valid_args_len(command_parts_length, 2) {
-                    self.call_web3_service(|service| Box::pin(
-                        service.get_block_by_number(
-                            command_parts[1],
-                            convert_str_to_bool(command_parts[2]),
-                        )
-                    )).await;
-                }
-            },
-            "get_block_header_by_hash" => {
-                if valid_args_len(command_parts_length, 2) {
-                    self.call_web3_service(|service| Box::pin(
-                        service.get_block_header_by_hash(
-                            command_parts[1],
-                            convert_str_to_bool(command_parts[2]),
-                        )
-                    )).await;
-                }
-            },
-            "get_block_header_by_number" => {
-                if valid_args_len(command_parts_length, 2) {
-                    self.call_web3_service(|service| Box::pin(
-                        service.get_block_header_by_number(
-                            command_parts[1],
-                            convert_str_to_bool(command_parts[2]),
-                        )
-                    )).await;
-                }
-            },
-            "get_block_hash_by_number" => {
-                if valid_args_len(command_parts_length, 1) {
-                    self.call_web3_service(|service| Box::pin(
-                        service.get_block_hash_by_number(command_parts[1])
-                    )).await;
-                }
-            },
-            "get_transaction_by_hash" => {
-                if valid_args_len(command_parts_length, 1) {
-                    self.call_web3_service(|service| Box::pin(
-                        service.get_transaction_by_hash(command_parts[1])
-                    )).await;
-                }
-            },
-            "get_transaction_by_block_hash_and_index" => {
-                if valid_args_len(command_parts_length, 2) {
-                    self.call_web3_service(|service| Box::pin(
-                        service.get_transaction_by_block_hash_and_index(
-                            command_parts[1],
-                            command_parts[2],
-                        )
-                    )).await;
-                }
-            },
-            "get_transaction_by_block_number_and_index" => {
-                if valid_args_len(command_parts_length, 2) {
-                    self.call_web3_service(|service| Box::pin(
-                        service.get_transaction_by_block_number_and_index(
-                            command_parts[1],
-                            command_parts[2],
-                        )
-                    )).await;
-                }
-            },
-            "get_transaction_receipt" => {
-                if valid_args_len(command_parts_length, 1) {
-                    self.call_web3_service(|service| Box::pin(
-                        service.get_transaction_receipt(command_parts[1])
-                    )).await;
-                }
-            },
-            "get_pending_transactions" => {
-                self.call_web3_service(|service| Box::pin(
-                    service.get_pending_transactions()
-                )).await;
-            },
-            "get_pending_tx_size" => {
-                self.call_web3_service(|service| Box::pin(
-                    service.get_pending_tx_size()
-                )).await;
-            },
-            "get_code" => {
-                if valid_args_len(command_parts_length, 1) {
-                    self.call_web3_service(|service| Box::pin(
-                        service.get_code(command_parts[1])
-                    )).await;
-                }
-            },
-            "get_total_transaction_count" => {
-                self.call_web3_service(|service| Box::pin(
-                    service.get_total_transaction_count()
-                )).await;
-            },
-            "call" => {
-                if valid_args_len(command_parts_length, 3) {
-                    let tokens = parse_contract_function_tokens(&command_parts, &self.config);
-                    self.call_web3_service(|service| Box::pin(
-                        service.call(
-                            command_parts[1],
-                            command_parts[2],
-                            command_parts[3],
-                            &tokens,
-                        )
-                    )).await;
-                }
-            },
-            "send_raw_transaction" => {
-                if valid_args_len(command_parts_length, 3) {
-                    let tokens = parse_contract_function_tokens(&command_parts, &self.config);
-                    self.call_web3_service(|service| Box::pin(
-                        service.send_raw_transaction(
-                            command_parts[1],
-                            command_parts[2],
-                            command_parts[3],
-                            &tokens,
-                        )
-                    )).await;
-                }
-            },
-            "send_raw_transaction_and_get_proof" => {
-                if valid_args_len(command_parts_length, 3) {
-                    let tokens = parse_contract_function_tokens(&command_parts, &self.config);
-                    self.call_web3_service(|service| Box::pin(
-                        service.send_raw_transaction_and_get_proof(
-                            command_parts[1],
-                            command_parts[2],
-                            command_parts[3],
-                            &tokens,
-                        )
-                    )).await;
-                }
-            },
-            "deploy" => {
-                if valid_args_len(command_parts_length, 1) {
-                    let tokens = parse_contract_constructor_tokens(&command_parts, &self.config);
-                    self.call_web3_service(|service| Box::pin(
-                        service.deploy(
-                            command_parts[1],
-                            &tokens,
-                        )
-                    )).await;
-                }
-            },
-            "compile" => {
-                if valid_args_len(command_parts_length, 1) {
-                    let link_libraries: Option<HashMap<String, String>> = if command_parts_length > 2 {
-                        Some(fisco_bcos_service::serde_json::from_str::<HashMap<String, String>>(command_parts[2]).unwrap())
-                    } else {
-                        None
-                    };
-                    self.call_web3_service(|service| Box::pin(
-                        service.compile(command_parts[1], &link_libraries)
-                    )).await;
-                }
-            },
-            "get_system_config_by_key" => {
-                if valid_args_len(command_parts_length, 1) {
-                    self.call_web3_service(|service| Box::pin(
-                        service.get_system_config_by_key(command_parts[1])
-                    )).await;
-                }
-            },
-            "get_transaction_by_hash_with_proof" => {
-                if valid_args_len(command_parts_length, 1) {
-                    self.call_web3_service(|service| Box::pin(
-                        service.get_transaction_by_hash_with_proof(
-                            command_parts[1],
-                        )
-                    )).await;
-                }
-            },
-            "get_transaction_receipt_by_hash_with_proof" => {
-                if valid_args_len(command_parts_length, 1) {
-                    self.call_web3_service(|service| Box::pin(
-                        service.get_transaction_receipt_by_hash_with_proof(
-                            command_parts[1],
-                        )
-                    )).await;
-                }
-            },
-            "generate_group" => {
-                if valid_args_len(command_parts_length, 1) {
-                    let params = convert_str_to_json(command_parts[1]);
-                    self.call_web3_service(|service| Box::pin(service.generate_group(&params))).await;
-                }
-            },
-            "start_group" => {
-                self.call_web3_service(|service| Box::pin(service.start_group())).await;
-            },
-            "stop_group" => {
-                self.call_web3_service(|service| Box::pin(service.stop_group())).await;
-            },
-            "remove_group" => {
-                self.call_web3_service(|service| Box::pin(service.remove_group())).await;
-            },
-            "recover_group" => {
-                self.call_web3_service(|service| Box::pin(service.recover_group())).await;
-            },
-            "query_group_status" => {
-                self.call_web3_service(|service| Box::pin(
-                    service.query_group_status()
-                )).await;
-            },
-            "get_node_info" => {
-                self.call_web3_service(|service| Box::pin(
-                    service.get_node_info()
-                )).await;
-            },
-            "get_batch_receipts_by_block_number_and_range" => {
-                if valid_args_len(command_parts_length, 4) {
-                    self.call_web3_service(|service| Box::pin(
-                        service.get_batch_receipts_by_block_number_and_range(
-                            command_parts[1],
-                            convert_str_to_number::<u32>(command_parts[2], 0),
-                            convert_str_to_number::<i32>(command_parts[2], -1),
-                            convert_str_to_bool(command_parts[4]),
-                        )
-                    )).await;
-                }
-            },
-            "get_batch_receipts_by_block_hash_and_range" => {
-                if valid_args_len(command_parts_length, 4) {
-                    self.call_web3_service(|service| Box::pin(
-                        service.get_batch_receipts_by_block_hash_and_range(
-                            command_parts[1],
-                            convert_str_to_number::<u32>(command_parts[2], 0),
-                            convert_str_to_number::<i32>(command_parts[2], -1),
-                            convert_str_to_bool(command_parts[4]),
-                        )
-                    )).await;
-                }
-            },
-            command => println!("\nUnavailable command {:?}\n", command),
-        }
+            _ => self.call_web3_service(method, &args).await,
+        };
     }
 }

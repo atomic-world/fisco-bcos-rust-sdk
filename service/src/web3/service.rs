@@ -1,4 +1,5 @@
 use ethabi::Token;
+use std::process::Command;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use serde_json::{Value as JSONValue, json};
@@ -27,14 +28,14 @@ pub struct CallResponse {
 }
 
 pub struct Service {
-    pub config: Config,
+    config: Config,
     account: Account,
     fetcher: Box<dyn FetcherTrait + Send + Sync>,
 }
 
 impl Service {
     fn get_abi(&self, contract_name: &str) -> Result<ABI, ServiceError> {
-        Ok(ABI::new(&self.config.contract, contract_name, self.config.sm_crypto)?)
+        Ok(ABI::new_with_contract_config(&self.config.contract, contract_name, self.config.sm_crypto)?)
     }
 
     pub fn new(config: &Config, fetcher: Box<dyn FetcherTrait + Send + Sync>) -> Result<Service, ServiceError> {
@@ -45,6 +46,10 @@ impl Service {
                 account: create_account_from_pem(&config.account, config.sm_crypto)?,
             }
         )
+    }
+
+    pub fn get_config(&self) -> Config {
+        self.config.clone()
     }
 
     pub async fn get_client_version(&self)  -> Result<JSONValue, ServiceError> {
@@ -251,16 +256,15 @@ impl Service {
         })
     }
 
-    async fn send_transaction(
+    pub async fn send_transaction_with_abi(
         &self,
         method: &str,
-        contract_name: &str,
         to_address: &str,
+        abi: &ABI,
         function_name: &str,
         tokens: &Vec<Token>,
     ) -> Result<String, ServiceError> {
         let block_number = convert_hex_str_to_u32(&self.get_block_number().await?);
-        let abi = self.get_abi(contract_name)?;
         let data = abi.encode_function_input(function_name, tokens)?;
         let transaction_data = get_sign_transaction_data(
             &self.account,
@@ -285,7 +289,8 @@ impl Service {
         function_name: &str,
         tokens: &Vec<Token>,
     ) -> Result<String, ServiceError> {
-        Ok(self.send_transaction("sendRawTransaction", contract_name, to_address, function_name, tokens).await?)
+        let abi = self.get_abi(contract_name)?;
+        Ok(self.send_transaction_with_abi("sendRawTransaction", to_address, &abi, function_name, tokens).await?)
     }
 
     pub async fn send_raw_transaction_and_get_proof(
@@ -295,7 +300,8 @@ impl Service {
         function_name: &str,
         tokens: &Vec<Token>,
     ) -> Result<String, ServiceError> {
-        Ok(self.send_transaction("sendRawTransactionAndGetProof", contract_name, to_address, function_name, tokens).await?)
+        let abi = self.get_abi(contract_name)?;
+        Ok(self.send_transaction_with_abi("sendRawTransactionAndGetProof", to_address, &abi, function_name, tokens).await?)
     }
 
     pub async fn deploy(&self, contract_name: &str, tokens: &Vec<Token>) -> Result<JSONValue, ServiceError> {
@@ -331,8 +337,7 @@ impl Service {
                 "contractAddress": transaction_receipt["contractAddress"]
             }));
         }
-        Err(ServiceError::FiscoBcosError {
-            code: -1,
+        Err(ServiceError::CustomError {
             message: format!(
                 "Contract deployed, but the action for fetching transaction receipt is timeout. Transaction hash is {:?}",
                 transaction_hash
@@ -348,8 +353,43 @@ impl Service {
         contract_name: &str,
         link_libraries: &Option<HashMap<String, String>>,
     ) -> Result<(), ServiceError> {
-        let mut abi = self.get_abi(contract_name)?;
-        Ok(abi.compile(link_libraries)?)
+        let contract_path = self.config.contract.get_contract_path(contract_name);
+        if !contract_path.is_file() {
+            return Err(
+                ServiceError::CustomError {
+                    message: format!("Can't find the contract:{:}", contract_name)
+                }
+            );
+        }
+
+        let mut compile_command = Command::new(&self.config.contract.solc);
+        let link_libraries: Vec<String> = match link_libraries {
+            None => vec![],
+            Some(link_libraries) => {
+                let mut result: Vec<String> = vec![];
+                for (name, address) in link_libraries  {
+                    result.push(format!("{:}.sol:{:}:{:}", contract_name, name, address))
+                }
+                result
+            }
+        };
+        if link_libraries.len() > 0 {
+            compile_command.arg("--libraries");
+            compile_command.arg(link_libraries.join(" "));
+        }
+        compile_command.arg("--overwrite").arg("--abi").arg("--bin").arg("-o");
+        compile_command.arg(self.config.contract.output.clone());
+        compile_command.arg(contract_path);
+        let status = compile_command.status()?;
+        if status.success() {
+            Ok(())
+        } else {
+            Err(
+                ServiceError::CustomError {
+                    message: format!("Can't compile the contract:{:}, please try it again later", contract_name)
+                }
+            )
+        }
     }
 
     pub async fn get_transaction_by_hash_with_proof(&self, transaction_hash: &str) -> Result<JSONValue, ServiceError> {

@@ -2,7 +2,10 @@ use serde_json::Value as JSONValue;
 use async_trait::async_trait;
 use hyper::{Body, Client};
 use hyper::http::{Request, Method};
-use crate::web3::{fetcher_trait::FetcherTrait, service_error::ServiceError};
+use crate::web3::{
+    service_error::ServiceError,
+    fetcher_trait::{FetcherTrait, parse_response},
+};
 
 pub struct RPCFetcher  {
     host: String,
@@ -30,16 +33,6 @@ impl FetcherTrait for RPCFetcher {
         let response = client.request(request).await?;
         let response_body = hyper::body::to_bytes(response.into_body()).await?;
         let data: JSONValue = serde_json::from_slice(&response_body.to_vec())?;
-        let result = &data["result"];
-        let error = &data["error"];
-        match error.is_null() {
-            true => Ok(result.clone()),
-            false => {
-                Err(ServiceError::FiscoBcosError {
-                    code: error["code"].as_i64().unwrap(),
-                    message: error["message"].to_string(),
-                })
-            }
-        }
+        parse_response(&data)
     }
 }

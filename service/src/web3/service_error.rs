@@ -36,6 +36,11 @@ pub enum ServiceError {
     #[error("service transaction error")]
     ServiceTransactionError(#[from] TransactionError),
 
+    #[error("fisco bcos custom error")]
+    CustomError {
+        message: String,
+    },
+
     #[error("fisco bcos service error")]
     FiscoBcosError {
         code: i64,
