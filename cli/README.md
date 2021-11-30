@@ -41,7 +41,7 @@ Welcome to Command line tool for FISCO BCOS (V0.2.0). Type help to get help
 5. Visit https://github.com/kkawakam/rustyline#actions to get more actions
 ```
 
-首先调用 `set_config` 来设置环境信息（配置信息详情参见：[服务配置](https://github.com/atomic-world/fisco-bcos-rust-sdk/tree/main/service#%E9%80%9A%E8%BF%87%E6%96%B9%E6%B3%95-create_web3_service-%E8%8E%B7%E5%BE%97-web3service-%E5%AE%9E%E4%BE%8B)），比如：
+首先调用 `set_config` 来设置环境信息（配置信息详情参见：[服务配置](https://github.com/atomic-world/fisco-bcos-rust-sdk/tree/main/service#%E4%B8%80%E9%85%8D%E7%BD%AE)），比如：
 
 ```shell
 >> set_config ./configs/config.json

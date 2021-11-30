@@ -109,7 +109,7 @@ let web3_service = create_web3_service(config_file_path).unwrap();
 * 列表参见：[Web3Service](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/web3/service.rs)。
 * 接口将 [FISCO BCOS JSON-RPC](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/api.html) 返回的 `error` 属性转换成了 `fisco_bcos_service::web3::service_error::ServiceError::FiscoBcosError` 异常抛出，包含以下属性：
 
-    * code：错误类型，详情参见：[错误码描述](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/api.html#id2)
+    * code：错误类型，详情参见：[错误码描述](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/api.html#id2)。
     * message：错误信息。
 
 * 除 `call` 的返回值结构与相关 JSON-RPC 方法不一致外，其余接口的返回值结构参见 [FISCO BCOS JSON-RPC](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/api.html) 中相关方法返回值中的 `result` 属性。
