@@ -106,8 +106,51 @@ let web3_service = create_web3_service(config_file_path).unwrap();
 
 ### 2.2 接口
 
-* 列表参见：[Web3Service](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/web3/service.rs)。
-* 接口将 [FISCO BCOS JSON-RPC](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/api.html) 返回的 `error` 属性转换成了 `fisco_bcos_service::web3::service_error::ServiceError::FiscoBcosError` 异常抛出，包含以下属性：
+* 列表参见：
+
+    * `get_client_version`
+    * `get_block_number`
+    * `get_pbft_view`
+    * `get_sealer_list`
+    * `get_observer_list`
+    * `get_consensus_status`
+    * `get_sync_status`
+    * `get_peers`
+    * `get_group_peers`
+    * `get_node_id_list`
+    * `get_group_list`
+    * `get_block_by_hash`
+    * `get_block_by_number`
+    * `get_block_header_by_hash`
+    * `get_block_header_by_number`
+    * `get_block_hash_by_number`
+    * `get_transaction_by_hash`
+    * `get_transaction_by_block_hash_and_index`
+    * `get_transaction_by_block_number_and_index`
+    * `get_transaction_receipt`
+    * `get_pending_transactions`
+    * `get_pending_tx_size`
+    * `get_code`
+    * `get_total_transaction_count`
+    * `get_system_config_by_key`
+    * `call`
+    * `send_raw_transaction`
+    * `send_raw_transaction_and_get_proof`
+    * `deploy`
+    * `compile`
+    * `get_transaction_by_hash_with_proof`
+    * `get_transaction_receipt_by_hash_with_proof`
+    * `generate_group`
+    * `start_group`
+    * `stop_group`
+    * `remove_group`
+    * `recover_group`
+    * `query_group_status`
+    * `get_node_info`
+    * `get_batch_receipts_by_block_number_and_range`
+    * `get_batch_receipts_by_block_hash_and_range`
+
+* 接口将 [FISCO BCOS JSON-RPC](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/api.html) 返回的 `error` 属性转换成了 `fisco_bcos_service::web3::service_error::ServiceError::FiscoBcosError` 异常并返回，包含以下属性：
 
     * code：错误类型，详情参见：[错误码描述](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/api.html#id2)。
     * message：错误信息。
@@ -148,7 +191,14 @@ let system_config_service = SystemConfigService::new(&web3_service);
 
 ### 3.2 接口
 
-* `set_value_by_key`：入参详情参见：[setValueByKey](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#setvaluebykey)。
+* 接口列表：
+
+    * `set_value_by_key`
+
+* 以上所有接口的返回值如果大于等于 `0`，返回此值，否则返回 `fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError` 异常，包含以下属性：
+
+    * code：错误类型，[点击查看详情](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html)。
+    * message：错误信息。
 
 ## 四、注意事项
 
