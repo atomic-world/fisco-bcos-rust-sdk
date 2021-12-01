@@ -64,6 +64,24 @@ impl Service {
         Ok(parse_json_string(&self.fetcher.fetch(&params).await?))
     }
 
+    pub(crate) async fn get_transaction_receipt_with_timeout(
+        &self,
+        transaction_hash: &str,
+    ) -> Result<JSONValue, ServiceError> {
+        let start = Instant::now();
+        let timeout_milliseconds = (1000 * self.config.timeout_seconds) as u128;
+        while Instant::now().duration_since(start).as_millis() < timeout_milliseconds {
+            let transaction_receipt: JSONValue = self.get_transaction_receipt(transaction_hash).await?;
+            if transaction_receipt.is_null() {
+                tokio::time::sleep(Duration::from_millis(200)).await;
+                continue;
+            }
+            let transaction_receipt = self.get_transaction_receipt(transaction_hash).await?;
+            return Ok(transaction_receipt);
+        }
+        Ok(json!(null))
+    }
+
     pub fn new(config: &Config, fetcher: Box<dyn FetcherTrait + Send + Sync>) -> Result<Service, ServiceError> {
         Ok(
             Service {
@@ -322,27 +340,21 @@ impl Service {
             &json!([self.config.group_id, format!("0x{}", hex::encode(&transaction_data))]),
         );
         let transaction_hash = parse_json_string(&self.fetcher.fetch(&params).await?);
-        let start = Instant::now();
-        let timeout_milliseconds = (1000 * self.config.timeout_seconds) as u128;
-        while Instant::now().duration_since(start).as_millis() < timeout_milliseconds {
-            let transaction_receipt: JSONValue = self.get_transaction_receipt(&transaction_hash).await?;
-            if transaction_receipt.is_null() {
-                tokio::time::sleep(Duration::from_millis(200)).await;
-                continue;
-            }
-            let transaction_receipt = self.get_transaction_receipt(&transaction_hash).await?;
-            return Ok(json!({
+        let transaction_receipt = self.get_transaction_receipt_with_timeout(&transaction_hash).await?;
+        if transaction_receipt.is_null() {
+            Err(ServiceError::CustomError {
+                message: format!(
+                    "Contract deployed, but the action for fetching transaction receipt is timeout. Transaction hash is {:?}",
+                    transaction_hash
+                ),
+            })
+        } else {
+            Ok(json!({
                 "status": transaction_receipt["status"],
                 "transactionHash": transaction_receipt["transactionHash"],
                 "contractAddress": transaction_receipt["contractAddress"]
-            }));
+            }))
         }
-        Err(ServiceError::CustomError {
-            message: format!(
-                "Contract deployed, but the action for fetching transaction receipt is timeout. Transaction hash is {:?}",
-                transaction_hash
-            ),
-        })
     }
 
     ///

@@ -24,26 +24,26 @@ pub enum ServiceError {
     #[error("std::array::TryFromSliceError")]
     TryFromSliceError(#[from] std::array::TryFromSliceError),
 
-    #[error("service tassl error")]
-    ServiceTASSLError(#[from] TASSLError),
+    #[error("tassl error")]
+    TASSLError(#[from] TASSLError),
 
-    #[error("service abi error")]
-    ServiceABIError(#[from] ABIError),
+    #[error("abi error")]
+    ABIError(#[from] ABIError),
 
-    #[error("service account error")]
-    ServiceAccountError(#[from] AccountError),
+    #[error("account error")]
+    AccountError(#[from] AccountError),
 
-    #[error("service transaction error")]
-    ServiceTransactionError(#[from] TransactionError),
+    #[error("transaction error")]
+    TransactionError(#[from] TransactionError),
 
     #[error("fisco bcos custom error")]
     CustomError {
         message: String,
     },
 
-    #[error("fisco bcos service error")]
+    #[error("fisco bcos response error")]
     FiscoBcosError {
-        code: i64,
+        code: i32,
         message: String,
     }
 }

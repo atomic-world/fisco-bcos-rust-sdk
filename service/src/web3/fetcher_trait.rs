@@ -9,7 +9,7 @@ pub fn parse_response(response: &JSONValue) -> Result<JSONValue, ServiceError> {
         true => Ok(result.clone()),
         false => {
             Err(ServiceError::FiscoBcosError {
-                code: error["code"].as_i64().unwrap(),
+                code: error["code"].as_i64().unwrap() as i32,
                 message: error["message"].to_string(),
             })
         }

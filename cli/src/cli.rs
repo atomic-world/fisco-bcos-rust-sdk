@@ -343,7 +343,7 @@ impl Cli {
                 let response = system_config_service.set_value_by_key(&args[0], &args[1]).await;
                 match response {
                     Err(error) => println!("\nError: {:?}\n", error),
-                    _ => {}
+                    Ok(data) =>  println!("\n{:?}\n", data),
                 };
             }
         };
