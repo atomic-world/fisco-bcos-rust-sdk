@@ -106,7 +106,7 @@ let web3_service = create_web3_service(config_file_path).unwrap();
 
 ### 2.2 接口
 
-* 列表参见：
+* 接口列表：
 
     * `get_client_version`
     * `get_block_number`
