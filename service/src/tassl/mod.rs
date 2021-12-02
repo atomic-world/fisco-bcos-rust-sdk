@@ -256,6 +256,14 @@ impl TASSL {
             }
         }
     }
+
+    pub fn close(&self) {
+        unsafe {
+            if self.ssl.is_some() {
+                SSL_shutdown(self.ssl.unwrap());
+            }
+        }
+    }
 }
 
 impl Drop for TASSL {

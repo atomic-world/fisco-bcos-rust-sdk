@@ -53,6 +53,7 @@ impl FetcherTrait for ChannelFetcher {
         let buffer_size = u32::from_be_bytes(buffer.clone().as_slice().try_into()?) as usize;
         buffer.append(&mut vec![0; buffer_size - 4]);
         tassl.read(&mut buffer[4..])?;
+        tassl.close();
         let response: JSONValue = serde_json::from_slice(&buffer[42..buffer_size - 1])?;
         parse_response(&response)
     }
