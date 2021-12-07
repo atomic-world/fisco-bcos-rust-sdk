@@ -2,8 +2,9 @@ use thiserror::Error;
 use num_bigint::BigInt;
 use num_traits::cast::ToPrimitive;
 
-use crate::abi::ABIError;
-use crate::web3::service_error::ServiceError as Web3ServiceError;
+use crate::abi::{ABI, ABIError};
+use crate::helpers::parse_json_string;
+use crate::web3::{service::Service as Web3Service, service_error::ServiceError as Web3ServiceError};
 
 #[derive(Error, Debug)]
 pub enum PrecompiledServiceError {
@@ -67,4 +68,40 @@ pub(crate) fn parse_output(output: &str) -> Result<i32, PrecompiledServiceError>
         _ => format!("unknown output code:{:?}", code)
     };
     Err(PrecompiledServiceError::FiscoBcosError { code, message })
+}
+
+pub(crate) async fn send_transaction(
+    web3_service: &Web3Service,
+    contract_name: &str,
+    address: &str,
+    abi_content: &str,
+    method: &str,
+    params: &Vec<String>,
+) -> Result<i32, PrecompiledServiceError> {
+    let abi_content = Some(Vec::from(abi_content.as_bytes()));
+    let abi_bin_content: Option<Vec<u8>> = None;
+    let abi = ABI::new(
+        &abi_content,
+        &abi_bin_content,
+        contract_name,
+        web3_service.get_config().sm_crypto,
+    )?;
+    let tokens = abi.parse_function_tokens(method, &params)?;
+    let transaction_hash = web3_service.send_transaction_with_abi(
+        "sendRawTransaction",
+        address,
+        &abi,
+        method,
+        &tokens
+    ).await?;
+    let transaction_receipt= web3_service.get_transaction_receipt_with_timeout(&transaction_hash).await?;
+    if transaction_receipt.is_null() {
+        return Err(PrecompiledServiceError::CustomError {
+            message: format!(
+                "Transaction invoked, but the action for fetching transaction receipt is timeout. Transaction hash is {:?}",
+                transaction_hash
+            ),
+        });
+    }
+    parse_output(&parse_json_string(&transaction_receipt["output"]))
 }

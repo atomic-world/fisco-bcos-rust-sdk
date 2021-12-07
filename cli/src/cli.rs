@@ -8,7 +8,10 @@ use fisco_bcos_service::{
     config::Config,
     ethabi::token::Token,
     serde_json::{json, Value as JSONValue},
-    precompiled::system_config_service::SystemConfigService,
+    precompiled::{
+        consensus_service::ConsensusService,
+        system_config_service::SystemConfigService,
+    },
     web3::{service::Service as Web3Service, service_error::ServiceError as Web3ServiceError},
 };
 
@@ -349,6 +352,26 @@ impl Cli {
         };
     }
 
+    async fn call_consensus_service(&self, method: &str, args: &Vec<String>) {
+        let args_length = args.len();
+        match valid_args_len(args_length, 1) {
+            Err(error) => println!("\nError: {:?}\n", error),
+            Ok(_) => {
+                let web3_service = self.web3_service.as_ref().unwrap();
+                let consensus_service = ConsensusService::new(web3_service);
+                let response = match method {
+                    "consensus:add_sealer" => consensus_service.add_sealer(&args[0]).await,
+                    "consensus:add_observer" => consensus_service.add_observer(&args[0]).await,
+                    _ => consensus_service.remove(&args[0]).await,
+                };
+                match response {
+                    Err(error) => println!("\nError: {:?}\n", error),
+                    Ok(data) =>  println!("\n{:?}\n", data),
+                };
+            }
+        };
+    }
+
 
     fn echo_help(&self) {
         println!("\n1. Use set_config function to initialize the environment(e.g., set_config ./config/config.json)");
@@ -368,7 +391,8 @@ impl Cli {
                 "generate_group", "start_group", "stop_group",
                 "remove_group", "recover_group", "query_group_status",
                 "get_node_info", "get_batch_receipts_by_block_number_and_range", "get_batch_receipts_by_block_hash_and_range",
-                "system_config:set_value_key"
+                "system_config:set_value_key",
+                "consensus:add_sealer", "consensus:add_observer", "consensus:remove",
             ],
         );
         println!("3. Type help to get help");
@@ -406,6 +430,7 @@ impl Cli {
                 } else {
                     match method {
                         "system_config:set_value_by_key" => self.call_system_config_service(&args).await,
+                        "consensus:add_sealer" | "consensus:add_observer" | "consensus:remove" => self.call_consensus_service(method, &args).await,
                         _ => self.call_web3_service(method, &args).await
                     }
                 }

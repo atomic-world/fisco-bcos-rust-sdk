@@ -26,7 +26,10 @@ fisco-bcos-service = "0.2"
   * [三、SystemConfigService](#三SystemConfigService)
      * [3.1 实例化](#31-实例化)
      * [3.2 接口](#32-接口)
-  * [四、注意事项](#四注意事项)
+  * [四、ConsensusService](#四ConsensusService)
+     * [4.1 实例化](#41-实例化)
+     * [4.2 接口](#42-接口)
+  * [五、注意事项](#五注意事项)
 
 ## 一、配置
 
@@ -200,7 +203,37 @@ let system_config_service = SystemConfigService::new(&web3_service);
     * code：错误类型，[点击查看详情](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html)。
     * message：错误信息。
 
-## 四、注意事项
+## 四、ConsensusService
+
+`ConsensusService` 是对[预编译合约 ConsensusPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#consensusprecompiled-0x1003) 的封装。
+
+### 4.1 实例化
+
+```rust
+use fisco_bcos_service::{
+    create_web3_service,
+    precompiled::consensus_service::ConsensusService,
+};
+
+let config_file_path = "./configs/config.json";
+let web3_service = create_web3_service(config_file_path).unwrap();
+let consensus_service = ConsensusService::new(&web3_service);
+```
+
+### 4.2 接口
+
+* 接口列表：
+
+    * `add_sealer`
+    * `add_observer`
+    * `remove`
+
+* 以上所有接口的返回值如果大于等于 `0`，返回此值，否则返回 `fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError` 异常，包含以下属性：
+
+    * code：错误类型，[点击查看详情](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html)。
+    * message：错误信息。
+
+## 五、注意事项
 
 * 所有接口均为异步调用（使用了 Rust 的 [async](https://rust-lang.github.io/async-book/) 特性）。
 
