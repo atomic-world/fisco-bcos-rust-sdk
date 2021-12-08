@@ -183,7 +183,7 @@ let web3_service = create_web3_service(config_file_path).unwrap();
 
 ## 三、SystemConfigService
 
-`SystemConfigService` 是对[预编译合约 SystemConfigPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#systemconfigprecompiled-0x1000) 的封装。
+`SystemConfigService` 是对预编译合约 [SystemConfigPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#systemconfigprecompiled-0x1000) 的封装。
 
 ### 3.1 实例化
 
@@ -211,7 +211,7 @@ let system_config_service = SystemConfigService::new(&web3_service);
 
 ## 四、ConsensusService
 
-`ConsensusService` 是对[预编译合约 ConsensusPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#consensusprecompiled-0x1003) 的封装。
+`ConsensusService` 是对预编译合约 [ConsensusPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#consensusprecompiled-0x1003) 的封装。
 
 ### 4.1 实例化
 
@@ -241,7 +241,7 @@ let consensus_service = ConsensusService::new(&web3_service);
 
 ## 五、CNSService
 
-`CNSService` 是对[预编译合约 CNSPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#cnsprecompiled-0x1004) 的封装。
+`CNSService` 是对预编译合约 [CNSPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#cnsprecompiled-0x1004) 的封装。
 
 ### 5.1 实例化
 
@@ -276,7 +276,7 @@ let cns_service = CNSService::new(&web3_service);
 
 ## 六、PermissionService
 
-`PermissionService` 是对[预编译合约 PermissionPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#permissionprecompiled-0x1005) 的封装。
+`PermissionService` 是对预编译合约 [PermissionPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#permissionprecompiled-0x1005) 的封装。
 
 ### 6.1 实例化
 
