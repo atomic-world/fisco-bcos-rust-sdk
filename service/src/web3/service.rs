@@ -64,6 +64,30 @@ impl Service {
         Ok(parse_json_string(&self.fetcher.fetch(&params).await?))
     }
 
+    pub(crate) async fn call_with_abi(
+        &self,
+        to_address: &str,
+        abi: &ABI,
+        function_name: &str,
+        tokens: &Vec<Token>,
+    ) -> Result<CallResponse, ServiceError> {
+        let transaction_data = abi.encode_function_input(function_name, tokens)?;
+        let params = json!({
+            "from": format!("0x{}", hex::encode(&self.account.address)),
+            "to": to_address.to_owned(),
+            "value": "0x0",
+            "data": format!("0x{}", hex::encode(&transaction_data)),
+        });
+        let response = self.fetcher.fetch(
+            &generate_request_params("call", &json!([self.config.group_id, params]))
+        ).await?;
+        Ok(CallResponse {
+            status: parse_json_string(&response["status"]),
+            current_block_number: parse_json_string(&response["currentBlockNumber"]),
+            output: abi.decode_output(function_name, &parse_json_string(&response["output"]))?,
+        })
+    }
+
     pub(crate) async fn get_transaction_receipt_with_timeout(
         &self,
         transaction_hash: &str,
@@ -283,21 +307,7 @@ impl Service {
         tokens: &Vec<Token>,
     ) -> Result<CallResponse, ServiceError> {
         let abi = self.get_abi(contract_name)?;
-        let transaction_data = abi.encode_function_input(function_name, tokens)?;
-        let params = json!({
-            "from": format!("0x{}", hex::encode(&self.account.address)),
-            "to": to_address.to_owned(),
-            "value": "0x0",
-            "data": format!("0x{}", hex::encode(&transaction_data)),
-        });
-        let response = self.fetcher.fetch(
-            &generate_request_params("call", &json!([self.config.group_id, params]))
-        ).await?;
-        Ok(CallResponse {
-            status: parse_json_string(&response["status"]),
-            current_block_number: parse_json_string(&response["currentBlockNumber"]),
-            output: abi.decode_output(function_name, &parse_json_string(&response["output"]))?,
-        })
+        Ok(self.call_with_abi(to_address, &abi, function_name, tokens).await?)
     }
 
     pub async fn send_raw_transaction(

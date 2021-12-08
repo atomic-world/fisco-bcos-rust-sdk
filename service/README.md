@@ -29,7 +29,10 @@ fisco-bcos-service = "0.2"
   * [四、ConsensusService](#四ConsensusService)
      * [4.1 实例化](#41-实例化)
      * [4.2 接口](#42-接口)
-  * [五、注意事项](#五注意事项)
+  * [五、CNSService](#五CNSService)
+     * [5.1 实例化](#51-实例化)
+     * [5.2 接口](#52-接口)
+  * [六、注意事项](#六注意事项)
 
 ## 一、配置
 
@@ -233,7 +236,42 @@ let consensus_service = ConsensusService::new(&web3_service);
     * code：错误类型，[点击查看详情](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html)。
     * message：错误信息。
 
-## 五、注意事项
+## 五、CNSService
+
+`CNSService` 是对[预编译合约 CNSPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#cnsprecompiled-0x1004) 的封装。
+
+### 5.1 实例化
+
+```rust
+use fisco_bcos_service::{
+    create_web3_service,
+    cns_service::CNSService,
+};
+
+let config_file_path = "./configs/config.json";
+let web3_service = create_web3_service(config_file_path).unwrap();
+let cns_service = CNSService::new(&web3_service);
+```
+
+### 5.2 接口
+
+* 接口列表：
+
+    * `insert`
+    * `select_by_name`
+    * `select_by_name_and_version`
+    * `get_contract_address`
+
+* 接口 `insert` 的返回值如果大于等于 `0`，返回此值，否则返回 `fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError` 异常，包含以下属性：
+
+    * code：错误类型，[点击查看详情](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html)。
+    * message：错误信息。
+
+* 接口 `select_by_name` 与 `select_by_name_and_version` 会将返回值由 `string` 转换成 `serde_json::Value` 格式。
+
+* 接口 `get_contract_address` 会将返回值由 `address` 转换成 `String` 格式。
+
+## 六、注意事项
 
 * 所有接口均为异步调用（使用了 Rust 的 [async](https://rust-lang.github.io/async-book/) 特性）。
 

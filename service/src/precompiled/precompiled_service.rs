@@ -4,10 +4,13 @@ use num_traits::cast::ToPrimitive;
 
 use crate::abi::{ABI, ABIError};
 use crate::helpers::parse_json_string;
-use crate::web3::{service::Service as Web3Service, service_error::ServiceError as Web3ServiceError};
+use crate::web3::{service::{Service as Web3Service, CallResponse}, service_error::ServiceError as Web3ServiceError};
 
 #[derive(Error, Debug)]
 pub enum PrecompiledServiceError {
+    #[error("serde_json::Error")]
+    SerdeJsonError(#[from] serde_json::Error),
+
     #[error("abi error")]
     ABIError(#[from] ABIError),
 
@@ -104,4 +107,24 @@ pub(crate) async fn send_transaction(
         });
     }
     parse_output(&parse_json_string(&transaction_receipt["output"]))
+}
+
+pub(crate) async fn call(
+    web3_service: &Web3Service,
+    contract_name: &str,
+    address: &str,
+    abi_content: &str,
+    method: &str,
+    params: &Vec<String>,
+) -> Result<CallResponse, PrecompiledServiceError> {
+    let abi_content = Some(Vec::from(abi_content.as_bytes()));
+    let abi_bin_content: Option<Vec<u8>> = None;
+    let abi = ABI::new(
+        &abi_content,
+        &abi_bin_content,
+        contract_name,
+        web3_service.get_config().sm_crypto,
+    )?;
+    let tokens = abi.parse_function_tokens(method, &params)?;
+    Ok(web3_service.call_with_abi(address, &abi, method, &tokens).await?)
 }

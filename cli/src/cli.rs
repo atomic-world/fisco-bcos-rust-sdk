@@ -9,11 +9,13 @@ use fisco_bcos_service::{
     ethabi::token::Token,
     serde_json::{json, Value as JSONValue},
     precompiled::{
+        cns_service::CNSService,
         consensus_service::ConsensusService,
         system_config_service::SystemConfigService,
     },
     web3::{service::Service as Web3Service, service_error::ServiceError as Web3ServiceError},
 };
+use fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError;
 
 fn valid_args_len(args_length: usize, min_len: usize) -> Result<(), Web3ServiceError> {
     if args_length < min_len {
@@ -362,7 +364,10 @@ impl Cli {
                 let response = match method {
                     "consensus:add_sealer" => consensus_service.add_sealer(&args[0]).await,
                     "consensus:add_observer" => consensus_service.add_observer(&args[0]).await,
-                    _ => consensus_service.remove(&args[0]).await,
+                    "consensus:remove" => consensus_service.remove(&args[0]).await,
+                    command => Err(PrecompiledServiceError::CustomError {
+                        message: format!("Unavailable command {:?}", command),
+                    })
                 };
                 match response {
                     Err(error) => println!("\nError: {:?}\n", error),
@@ -372,6 +377,44 @@ impl Cli {
         };
     }
 
+    async fn call_cns_service(&self, method: &str, args: &Vec<String>) {
+        let args_length = args.len();
+        let web3_service = self.web3_service.as_ref().unwrap();
+        let cns_service = CNSService::new(web3_service);
+        let response = match method {
+            "cns:insert" => {
+                match valid_args_len(args_length, 4) {
+                    Err(err) => Err(PrecompiledServiceError::Web3ServiceError(err)),
+                    Ok(_) => cns_service.insert(&args[0], &args[1], &args[2], &args[3]).await.map(|v| json!(v)),
+                }
+            },
+            "cns:select_by_name" => {
+                match valid_args_len(args_length, 1) {
+                    Err(err) => Err(PrecompiledServiceError::Web3ServiceError(err)),
+                    Ok(_) => cns_service.select_by_name(&args[0]).await,
+                }
+            },
+            "cns:select_by_name_and_version" => {
+                match valid_args_len(args_length, 2) {
+                    Err(err) => Err(PrecompiledServiceError::Web3ServiceError(err)),
+                    Ok(_) => cns_service.select_by_name_and_version(&args[0], &args[1]).await,
+                }
+            },
+            "cns:get_contract_address" => {
+                match valid_args_len(args_length, 2) {
+                    Err(err) => Err(PrecompiledServiceError::Web3ServiceError(err)),
+                    Ok(_) => cns_service.get_contract_address(&args[0], &args[1]).await.map(|v| json!(v)),
+                }
+            },
+            command => Err(PrecompiledServiceError::CustomError {
+                message: format!("Unavailable command {:?}", command),
+            })
+        };
+        match response {
+            Err(error) => println!("\nError: {:?}\n", error),
+            Ok(data) =>  println!("\n{:?}\n", data),
+        };
+    }
 
     fn echo_help(&self) {
         println!("\n1. Use set_config function to initialize the environment(e.g., set_config ./config/config.json)");
@@ -393,6 +436,7 @@ impl Cli {
                 "get_node_info", "get_batch_receipts_by_block_number_and_range", "get_batch_receipts_by_block_hash_and_range",
                 "system_config:set_value_key",
                 "consensus:add_sealer", "consensus:add_observer", "consensus:remove",
+                "cns:insert", "cns:select_by_name", "cns:select_by_name_and_version", "cns:get_contract_address",
             ],
         );
         println!("3. Type help to get help");
@@ -431,6 +475,9 @@ impl Cli {
                     match method {
                         "system_config:set_value_by_key" => self.call_system_config_service(&args).await,
                         "consensus:add_sealer" | "consensus:add_observer" | "consensus:remove" => self.call_consensus_service(method, &args).await,
+                        "cns:insert" | "cns:select_by_name" | "cns:select_by_name_and_version" | "cns:get_contract_address" => {
+                            self.call_cns_service(method, &args).await
+                        },
                         _ => self.call_web3_service(method, &args).await
                     }
                 }
