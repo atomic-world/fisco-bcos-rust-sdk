@@ -1,26 +1,15 @@
-use serde_json::{json, Value as JSONValue};
+use serde_json::Value as JSONValue;
 
-use crate::web3::service::{CallResponse, Service as Web3Service};
-use crate::precompiled::precompiled_service::{PrecompiledServiceError, send_transaction, call};
+use crate::web3::service::Service as Web3Service;
+use crate::precompiled::precompiled_service::{
+    PrecompiledServiceError,
+    call,
+    send_transaction,
+    parse_string_token_to_json,
+};
 
 const ADDRESS: &str = "0x0000000000000000000000000000000000001004";
 const ABI_CONTENT: &str = r#"[{"constant":true,"inputs":[{"name":"name","type":"string"}],"name":"selectByName","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"name","type":"string"},{"name":"version","type":"string"}],"name":"selectByNameAndVersion","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"name","type":"string"},{"name":"version","type":"string"},{"name":"addr","type":"string"},{"name":"abi","type":"string"}],"name":"insert","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"name","type":"string"},{"name":"version","type":"string"}],"name":"getContractAddress","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"}]"#;
-
-fn parse_call_response(response: &CallResponse) -> Result<JSONValue, PrecompiledServiceError> {
-    Ok(
-        match &response.output {
-            None => json!(null),
-            Some(tokens) => {
-                if tokens.len() > 0 {
-                    let output = tokens[0].clone().into_string().unwrap_or(String::from(""));
-                    serde_json::from_str(&output)?
-                } else {
-                    json!(null)
-                }
-            }
-        }
-    )
-}
 
 pub struct CNSService<'a> {
     web3_service: &'a Web3Service,
@@ -55,7 +44,7 @@ impl CNSService<'_> {
             "selectByName",
             &params
         ).await?;
-        parse_call_response(&response)
+        parse_string_token_to_json(&response.output)
     }
 
     pub async fn select_by_name_and_version(&self, name: &str, version: &str) -> Result<JSONValue, PrecompiledServiceError> {
@@ -68,7 +57,7 @@ impl CNSService<'_> {
             "selectByNameAndVersion",
             &params
         ).await?;
-        parse_call_response(&response)
+        parse_string_token_to_json(&response.output)
     }
 
     pub async fn get_contract_address(&self, name: &str, version: &str) -> Result<String, PrecompiledServiceError> {

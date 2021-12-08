@@ -1,6 +1,8 @@
+use ethabi::Token;
 use thiserror::Error;
 use num_bigint::BigInt;
 use num_traits::cast::ToPrimitive;
+use serde_json::{json, Value as JSONValue};
 
 use crate::abi::{ABI, ABIError};
 use crate::helpers::parse_json_string;
@@ -34,17 +36,20 @@ pub enum PrecompiledServiceError {
 
 const PERMISSION_DENIED: i32 = -50000;
 const TABLE_EXIST: i32 = -50001;
-const TABLE_NAME_AND_ADDRESS_EXIST: i32 = -51000;
 const TABLE_NAME_AND_ADDRESS_NOT_EXIST: i32 = -51001;
+const TABLE_NAME_EXCEEDS: i32 = -51002;
+const CONTRACT_NOT_EXIST: i32 = -51003;
+const SPECIAL_PERMISSIONS: i32 = -51004;
+const TABLE_NAME_AND_ADDRESS_EXIST: i32 = -51009;
 const INVALID_NODE_ID: i32 = -51100;
 const LAST_SEALER: i32 = -51101;
 const P2P_NETWORK: i32 = -51102;
 const GROUP_PEERS: i32 = -51103;
 const SEALER_LIST: i32 = -51104;
 const OBSERVER_LIST: i32 = -51105;
-const CONTRACT_NAME_AND_VERSION_EXIST: i32 = -51200;
-const VERSION_EXCEEDS: i32 = -51201;
-const INVALID_KEY: i32 = -51300;
+const VERSION_EXCEEDS: i32 = -51200;
+const CONTRACT_NAME_AND_VERSION_EXIST: i32 = -51201;
+const INVALID_INPUT: i32 = -51300;
 
 pub(crate) fn parse_output(output: &str) -> Result<i32, PrecompiledServiceError> {
     let data = hex::decode(output.to_owned().trim_start_matches("0x").as_bytes())?;
@@ -57,17 +62,20 @@ pub(crate) fn parse_output(output: &str) -> Result<i32, PrecompiledServiceError>
     let message = match code {
         PERMISSION_DENIED => "Permission denied".to_owned(),
         TABLE_EXIST => "Table name already exist".to_owned(),
-        TABLE_NAME_AND_ADDRESS_EXIST => "Table name and address already exist".to_owned(),
         TABLE_NAME_AND_ADDRESS_NOT_EXIST => "Table name and address does not exist".to_owned(),
+        TABLE_NAME_EXCEEDS => "The length of the table name exceeds the maximum limit".to_owned(),
+        CONTRACT_NOT_EXIST => "Contract does not exist".to_owned(),
+        SPECIAL_PERMISSIONS => "Special permissions for ChainGovernancePrecompiled committee".to_owned(),
+        TABLE_NAME_AND_ADDRESS_EXIST => "Table name and address already exist".to_owned(),
         INVALID_NODE_ID => "Invalid node ID".to_owned(),
         LAST_SEALER => "The last sealer cannot be removed".to_owned(),
         P2P_NETWORK => "The node is not reachable".to_owned(),
         GROUP_PEERS => "The node is not a group peer".to_owned(),
         SEALER_LIST => "The node is already in the sealer list".to_owned(),
         OBSERVER_LIST => "The node is already in the observer list".to_owned(),
-        CONTRACT_NAME_AND_VERSION_EXIST => "Contract name and version already exist".to_owned(),
         VERSION_EXCEEDS => "Version string length exceeds the maximum limit".to_owned(),
-        INVALID_KEY => "Invalid configuration entry".to_owned(),
+        CONTRACT_NAME_AND_VERSION_EXIST => "Contract name and version already exist".to_owned(),
+        INVALID_INPUT => "Invalid input".to_owned(),
         _ => format!("unknown output code:{:?}", code)
     };
     Err(PrecompiledServiceError::FiscoBcosError { code, message })
@@ -127,4 +135,20 @@ pub(crate) async fn call(
     )?;
     let tokens = abi.parse_function_tokens(method, &params)?;
     Ok(web3_service.call_with_abi(address, &abi, method, &tokens).await?)
+}
+
+pub(crate) fn parse_string_token_to_json(tokens: &Option<Vec<Token>>) -> Result<JSONValue, PrecompiledServiceError> {
+    Ok(
+        match tokens {
+            None => json!(null),
+            Some(tokens) => {
+                if tokens.len() > 0 {
+                    let output = tokens[0].clone().into_string().unwrap_or(String::from(""));
+                    serde_json::from_str(&output)?
+                } else {
+                    json!(null)
+                }
+            }
+        }
+    )
 }

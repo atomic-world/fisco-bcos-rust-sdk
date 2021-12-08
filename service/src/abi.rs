@@ -56,7 +56,13 @@ impl ABI {
             .map(|param| param.kind.clone())
             .zip(params.iter().map(|v| v as &str)).collect();
         let tokens = params.iter()
-            .map(|&(ref param, value)| StrictTokenizer::tokenize(param, value))
+            .map(|&(ref param, value)| {
+                if *param == ParamType::Address {
+                    StrictTokenizer::tokenize(param, value.to_owned().trim_start_matches("0x"))
+                }  else {
+                    StrictTokenizer::tokenize(param, value)
+                }
+            })
             .collect::<Result<Vec<Token>, ETHError>>()?;
         Ok(tokens)
     }

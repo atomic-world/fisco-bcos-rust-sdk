@@ -11,6 +11,7 @@ use fisco_bcos_service::{
     precompiled::{
         cns_service::CNSService,
         consensus_service::ConsensusService,
+        permission_service::PermissionService,
         system_config_service::SystemConfigService,
     },
     web3::{service::Service as Web3Service, service_error::ServiceError as Web3ServiceError},
@@ -416,6 +417,57 @@ impl Cli {
         };
     }
 
+    async fn call_permission_service(&self, method: &str, args: &Vec<String>) {
+        let args_length = args.len();
+        let web3_service = self.web3_service.as_ref().unwrap();
+        let permission_service = PermissionService::new(web3_service);
+        let response = match method {
+            "permission:insert" => {
+                match valid_args_len(args_length, 2) {
+                    Err(err) => Err(PrecompiledServiceError::Web3ServiceError(err)),
+                    Ok(_) => permission_service.insert(&args[0], &args[1]).await.map(|v| json!(v)),
+                }
+            },
+            "permission:remove" => {
+                match valid_args_len(args_length, 2) {
+                    Err(err) => Err(PrecompiledServiceError::Web3ServiceError(err)),
+                    Ok(_) => permission_service.remove(&args[0], &args[1]).await.map(|v| json!(v)),
+                }
+            },
+            "permission:query_by_name" => {
+                match valid_args_len(args_length, 1) {
+                    Err(err) => Err(PrecompiledServiceError::Web3ServiceError(err)),
+                    Ok(_) => permission_service.query_by_name(&args[0]).await,
+                }
+            },
+            "permission:grant_write" => {
+                match valid_args_len(args_length, 2) {
+                    Err(err) => Err(PrecompiledServiceError::Web3ServiceError(err)),
+                    Ok(_) => permission_service.grant_write(&args[0], &args[1]).await.map(|v| json!(v)),
+                }
+            },
+            "permission:revoke_write" => {
+                match valid_args_len(args_length, 2) {
+                    Err(err) => Err(PrecompiledServiceError::Web3ServiceError(err)),
+                    Ok(_) => permission_service.revoke_write(&args[0], &args[1]).await.map(|v| json!(v)),
+                }
+            },
+            "permission:query_permission" => {
+                match valid_args_len(args_length, 1) {
+                    Err(err) => Err(PrecompiledServiceError::Web3ServiceError(err)),
+                    Ok(_) => permission_service.query_permission(&args[0]).await,
+                }
+            },
+            command => Err(PrecompiledServiceError::CustomError {
+                message: format!("Unavailable command {:?}", command),
+            })
+        };
+        match response {
+            Err(error) => println!("\nError: {:?}\n", error),
+            Ok(data) =>  println!("\n{:?}\n", data),
+        };
+    }
+
     fn echo_help(&self) {
         println!("\n1. Use set_config function to initialize the environment(e.g., set_config ./config/config.json)");
         println!(
@@ -437,6 +489,8 @@ impl Cli {
                 "system_config:set_value_key",
                 "consensus:add_sealer", "consensus:add_observer", "consensus:remove",
                 "cns:insert", "cns:select_by_name", "cns:select_by_name_and_version", "cns:get_contract_address",
+                "permission:insert", "permission:remove", "permission:query_by_name",
+                "permission:grant_write", "permission:revoke_write", "permission:query_permission",
             ],
         );
         println!("3. Type help to get help");
@@ -477,6 +531,9 @@ impl Cli {
                         "consensus:add_sealer" | "consensus:add_observer" | "consensus:remove" => self.call_consensus_service(method, &args).await,
                         "cns:insert" | "cns:select_by_name" | "cns:select_by_name_and_version" | "cns:get_contract_address" => {
                             self.call_cns_service(method, &args).await
+                        },
+                        "permission:insert" | "permission:remove" | "permission:query_by_name" | "permission:grant_write" | "permission:revoke_write" | "permission:query_permission" => {
+                            self.call_permission_service(method, &args).await
                         },
                         _ => self.call_web3_service(method, &args).await
                     }

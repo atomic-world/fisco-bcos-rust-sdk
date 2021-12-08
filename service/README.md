@@ -32,7 +32,10 @@ fisco-bcos-service = "0.2"
   * [五、CNSService](#五CNSService)
      * [5.1 实例化](#51-实例化)
      * [5.2 接口](#52-接口)
-  * [六、注意事项](#六注意事项)
+  * [六、PermissionService](#六PermissionService)
+     * [6.1 实例化](#61-实例化)
+     * [6.2 接口](#62-接口)
+  * [七、注意事项](#七注意事项)
 
 ## 一、配置
 
@@ -203,7 +206,7 @@ let system_config_service = SystemConfigService::new(&web3_service);
 
 * 以上所有接口的返回值如果大于等于 `0`，返回此值，否则返回 `fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError` 异常，包含以下属性：
 
-    * code：错误类型，[点击查看详情](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html)。
+    * code：错误类型，[点击查看详情](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#systemconfigprecompiled-0x1000)。
     * message：错误信息。
 
 ## 四、ConsensusService
@@ -233,7 +236,7 @@ let consensus_service = ConsensusService::new(&web3_service);
 
 * 以上所有接口的返回值如果大于等于 `0`，返回此值，否则返回 `fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError` 异常，包含以下属性：
 
-    * code：错误类型，[点击查看详情](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html)。
+    * code：错误类型，[点击查看详情](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#consensusprecompiled-0x1003)。
     * message：错误信息。
 
 ## 五、CNSService
@@ -264,14 +267,49 @@ let cns_service = CNSService::new(&web3_service);
 
 * 接口 `insert` 的返回值如果大于等于 `0`，返回此值，否则返回 `fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError` 异常，包含以下属性：
 
-    * code：错误类型，[点击查看详情](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html)。
+    * code：错误类型，[点击查看详情](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#cnsprecompiled-0x1004)。
     * message：错误信息。
 
 * 接口 `select_by_name` 与 `select_by_name_and_version` 会将返回值由 `string` 转换成 `serde_json::Value` 格式。
 
 * 接口 `get_contract_address` 会将返回值由 `address` 转换成 `String` 格式。
 
-## 六、注意事项
+## 六、PermissionService
+
+`PermissionService` 是对[预编译合约 PermissionPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#permissionprecompiled-0x1005) 的封装。
+
+### 6.1 实例化
+
+```rust
+use fisco_bcos_service::{
+    create_web3_service,
+    permission_service::PermissionService,
+};
+
+let config_file_path = "./configs/config.json";
+let web3_service = create_web3_service(config_file_path).unwrap();
+let permission_service = PermissionService::new(&web3_service);
+```
+
+### 6.2 接口
+
+* 接口列表：
+
+    * `insert`
+    * `remove`
+    * `query_by_name`
+    * `grant_write`
+    * `revoke_write`
+    * `query_permission`
+
+* 接口 `insert`、`remove`、`grant_write`、 `revoke_write` 的返回值如果大于等于 `0`，返回此值，否则返回 `fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError` 异常，包含以下属性：
+
+    * code：错误类型，[点击查看详情](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#permissionprecompiled-0x1005)。
+    * message：错误信息。
+
+* 接口 `query_by_name` 与 `query_permission` 会将返回值由 `string` 转换成 `serde_json::Value` 格式。
+
+## 七、注意事项
 
 * 所有接口均为异步调用（使用了 Rust 的 [async](https://rust-lang.github.io/async-book/) 特性）。
 
