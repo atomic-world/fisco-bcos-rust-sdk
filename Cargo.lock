@@ -386,6 +386,7 @@ version = "0.2.0"
 dependencies = [
  "async-trait",
  "autocfg 1.0.1",
+ "byte-slice-cast",
  "cc",
  "cfg-if",
  "ethabi",

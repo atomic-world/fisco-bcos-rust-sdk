@@ -1,7 +1,8 @@
-use ethabi::Token;
+use ethabi::{Int, Token};
 use thiserror::Error;
 use num_bigint::BigInt;
 use num_traits::cast::ToPrimitive;
+use byte_slice_cast::AsByteSlice;
 use serde_json::{json, Value as JSONValue};
 
 use crate::abi::{ABI, ABIError};
@@ -107,9 +108,9 @@ const TABLE_FIELD_VALUE_LENGTH_OVERFLOW: i32 = -50006;
 const TABLE_DUPLICATE_FIELD: i32 = -50007;
 const TABLE_INVALIDATE_FIELD: i32 = -50008;
 
-pub(crate) fn parse_output(output: &str) -> Result<i32, PrecompiledServiceError> {
-    let data = hex::decode(output.to_owned().trim_start_matches("0x").as_bytes())?;
-    let bit_number = BigInt::from_signed_bytes_be(&data);
+pub(crate) fn parse_output(output: &Int) -> Result<i32, PrecompiledServiceError> {
+    let bytes = output.as_byte_slice();
+    let bit_number = BigInt::from_signed_bytes_le(bytes);
     let code = bit_number.to_i32().unwrap_or(-1);
     if code >= 0 {
       return Ok(code);
@@ -204,7 +205,12 @@ pub(crate) async fn send_transaction(
             ),
         });
     }
-    parse_output(&parse_json_string(&transaction_receipt["output"]))
+    let tokens = abi.decode_output(
+        method,
+        &parse_json_string(&transaction_receipt["output"]),
+    )?.unwrap();
+    let output = tokens[0].clone().into_int().unwrap();
+    parse_output(&output)
 }
 
 pub(crate) async fn call(

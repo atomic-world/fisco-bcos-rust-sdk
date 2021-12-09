@@ -35,7 +35,10 @@ fisco-bcos-service = "0.2"
   * [六、PermissionService](#六PermissionService)
      * [6.1 实例化](#61-实例化)
      * [6.2 接口](#62-接口)
-  * [七、注意事项](#七注意事项)
+  * [七、ContractLifeCycleService](#七ContractLifeCycleService)
+     * [7.1 实例化](#71-实例化)
+     * [7.2 接口](#72-接口)
+  * [八、注意事项](#八注意事项)
 
 ## 一、配置
 
@@ -309,7 +312,39 @@ let permission_service = PermissionService::new(&web3_service);
 
 * 接口 `query_by_name` 与 `query_permission` 会将返回值由 `string` 转换成 `serde_json::Value` 格式。
 
-## 七、注意事项
+## 七、ContractLifeCycleService
+
+`ContractLifeCycleService` 是对预编译合约 [ContractLifeCyclePrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#contractlifecycleprecompiled-0x1007) 的封装。
+
+### 7.1 实例化
+
+```rust
+use fisco_bcos_service::{
+    create_web3_service,
+    contract_life_cycle_service::ContractLifeCycleService,
+};
+
+let config_file_path = "./configs/config.json";
+let web3_service = create_web3_service(config_file_path).unwrap();
+let contract_life_cycle_service = ContractLifeCycleService::new(&web3_service);
+```
+
+### 7.2 接口
+
+* 接口列表：
+
+    * `freeze`
+    * `unfreeze`
+    * `grant_manager`
+    * `get_status`
+    * `list_manager`
+
+* 接口 `freeze`、`unfreeze`、`grant_manager` 的返回值如果大于等于 `0`，返回此值，否则返回 `fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError` 异常，包含以下属性：
+
+    * code：错误类型，[点击查看详情](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#contractlifecycleprecompiled-0x1007)。
+    * message：错误信息。
+
+## 八、注意事项
 
 * 所有接口均为异步调用（使用了 Rust 的 [async](https://rust-lang.github.io/async-book/) 特性）。
 

@@ -13,6 +13,7 @@ use fisco_bcos_service::{
         consensus_service::ConsensusService,
         permission_service::PermissionService,
         system_config_service::SystemConfigService,
+        contract_life_cycle_service::ContractLifeCycleService,
     },
     web3::{service::Service as Web3Service, service_error::ServiceError as Web3ServiceError},
 };
@@ -468,6 +469,51 @@ impl Cli {
         };
     }
 
+    async fn call_contract_life_cycle_service(&self, method: &str, args: &Vec<String>) {
+        let args_length = args.len();
+        let web3_service = self.web3_service.as_ref().unwrap();
+        let contract_life_cycle_service = ContractLifeCycleService::new(web3_service);
+        let response = match method {
+            "contract_life_cycle:freeze" => {
+                match valid_args_len(args_length, 1) {
+                    Err(err) => Err(PrecompiledServiceError::Web3ServiceError(err)),
+                    Ok(_) => contract_life_cycle_service.freeze(&args[0]).await.map(|v| json!(v)),
+                }
+            },
+            "contract_life_cycle:unfreeze" => {
+                match valid_args_len(args_length, 1) {
+                    Err(err) => Err(PrecompiledServiceError::Web3ServiceError(err)),
+                    Ok(_) => contract_life_cycle_service.unfreeze(&args[0]).await.map(|v| json!(v)),
+                }
+            },
+            "contract_life_cycle:grant_manager" => {
+                match valid_args_len(args_length, 2) {
+                    Err(err) => Err(PrecompiledServiceError::Web3ServiceError(err)),
+                    Ok(_) => contract_life_cycle_service.grant_manager(&args[0], &args[1]).await.map(|v| json!(v)),
+                }
+            },
+            "contract_life_cycle:get_status" => {
+                match valid_args_len(args_length, 1) {
+                    Err(err) => Err(PrecompiledServiceError::Web3ServiceError(err)),
+                    Ok(_) => contract_life_cycle_service.get_status(&args[0]).await.map(|v| json!(v)),
+                }
+            },
+            "contract_life_cycle:list_manager" => {
+                match valid_args_len(args_length, 1) {
+                    Err(err) => Err(PrecompiledServiceError::Web3ServiceError(err)),
+                    Ok(_) => contract_life_cycle_service.list_manager(&args[0]).await.map(|v| json!(v)),
+                }
+            },
+            command => Err(PrecompiledServiceError::CustomError {
+                message: format!("Unavailable command {:?}", command),
+            })
+        };
+        match response {
+            Err(error) => println!("\nError: {:?}\n", error),
+            Ok(data) =>  println!("\n{:?}\n", data),
+        };
+    }
+
     fn echo_help(&self) {
         println!("\n1. Use set_config function to initialize the environment(e.g., set_config ./config/config.json)");
         println!(
@@ -491,6 +537,8 @@ impl Cli {
                 "cns:insert", "cns:select_by_name", "cns:select_by_name_and_version", "cns:get_contract_address",
                 "permission:insert", "permission:remove", "permission:query_by_name",
                 "permission:grant_write", "permission:revoke_write", "permission:query_permission",
+                "contract_life_cycle:freeze", "contract_life_cycle:unfreeze", "contract_life_cycle:grant_manager",
+                "contract_life_cycle:get_status", "contract_life_cycle:list_manager",
             ],
         );
         println!("3. Type help to get help");
@@ -526,16 +574,18 @@ impl Cli {
                 if self.web3_service.is_none() {
                     println!("\nError: Please initialize the environment with set_config function first\n");
                 } else {
-                    match method {
-                        "system_config:set_value_by_key" => self.call_system_config_service(&args).await,
-                        "consensus:add_sealer" | "consensus:add_observer" | "consensus:remove" => self.call_consensus_service(method, &args).await,
-                        "cns:insert" | "cns:select_by_name" | "cns:select_by_name_and_version" | "cns:get_contract_address" => {
-                            self.call_cns_service(method, &args).await
-                        },
-                        "permission:insert" | "permission:remove" | "permission:query_by_name" | "permission:grant_write" | "permission:revoke_write" | "permission:query_permission" => {
-                            self.call_permission_service(method, &args).await
-                        },
-                        _ => self.call_web3_service(method, &args).await
+                    if method.starts_with("system_config:") {
+                        self.call_system_config_service(&args).await
+                    } else if method.starts_with("consensus:") {
+                        self.call_consensus_service(method, &args).await
+                    } else if method.starts_with("cns:") {
+                        self.call_cns_service(method, &args).await
+                    } else if method.starts_with("permission:") {
+                        self.call_permission_service(method, &args).await
+                    } else if method.starts_with("contract_life_cycle:") {
+                        self.call_contract_life_cycle_service(method, &args).await
+                    } else {
+                        self.call_web3_service(method, &args).await
                     }
                 }
             },
