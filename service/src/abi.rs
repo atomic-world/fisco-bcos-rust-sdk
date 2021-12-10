@@ -5,7 +5,7 @@ use wedpr_l_crypto_hash_sm3::WedprSm3;
 use ethabi::{
     Bytes, Contract, Function,
     Param, param_type::{ParamType, Writer},
-    token::{StrictTokenizer, Token, Tokenizer},
+    token::{LenientTokenizer, Token, Tokenizer},
     Error as ETHError,
     Result as ETHResult,
     decode as eth_decode,
@@ -58,9 +58,9 @@ impl ABI {
         let tokens = params.iter()
             .map(|&(ref param, value)| {
                 if *param == ParamType::Address {
-                    StrictTokenizer::tokenize(param, value.to_owned().trim_start_matches("0x"))
-                }  else {
-                    StrictTokenizer::tokenize(param, value)
+                    LenientTokenizer::tokenize(param, value.to_owned().trim_start_matches("0x"))
+                } else {
+                    LenientTokenizer::tokenize(param, value)
                 }
             })
             .collect::<Result<Vec<Token>, ETHError>>()?;

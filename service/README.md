@@ -38,8 +38,10 @@ fisco-bcos-service = "0.2"
   * [七、ContractLifeCycleService](#七ContractLifeCycleService)
      * [7.1 实例化](#71-实例化)
      * [7.2 接口](#72-接口)
-  * [八、注意事项](#八注意事项)
-
+  * [八、ChainGovernanceService](#八ChainGovernanceService)
+     * [8.1 实例化](#81-实例化)
+     * [8.2 接口](#82-接口)
+  * [九、注意事项](#九注意事项)
 ## 一、配置
 
 配置文件为包含以下信息的  `json` 文件：
@@ -106,7 +108,7 @@ fisco-bcos-service = "0.2"
 
 ## 二、Web3Service
 
-`Web3Service` 是对 [FISCO BCOS JSON-RPC](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/api.html) 的封装。
+[Web3Service](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/web3/service.rs) 是对 [FISCO BCOS JSON-RPC](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/api.html) 的封装。
 ### 2.1 实例化
 
 ```rust
@@ -186,7 +188,7 @@ let web3_service = create_web3_service(config_file_path).unwrap();
 
 ## 三、SystemConfigService
 
-`SystemConfigService` 是对预编译合约 [SystemConfigPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#systemconfigprecompiled-0x1000) 的封装。
+[SystemConfigService](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/precompiled/system_config_service.rs) 是对预编译合约 [SystemConfigPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#systemconfigprecompiled-0x1000) 的封装。
 
 ### 3.1 实例化
 
@@ -209,12 +211,12 @@ let system_config_service = SystemConfigService::new(&web3_service);
 
 * 以上所有接口的返回值如果大于等于 `0`，返回此值，否则返回 `fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError` 异常，包含以下属性：
 
-    * code：错误类型，[点击查看详情](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#systemconfigprecompiled-0x1000)。
+    * code：错误类型。
     * message：错误信息。
 
 ## 四、ConsensusService
 
-`ConsensusService` 是对预编译合约 [ConsensusPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#consensusprecompiled-0x1003) 的封装。
+[ConsensusService](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/precompiled/consensus_service.rs) 是对预编译合约 [ConsensusPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#consensusprecompiled-0x1003) 的封装。
 
 ### 4.1 实例化
 
@@ -239,12 +241,12 @@ let consensus_service = ConsensusService::new(&web3_service);
 
 * 以上所有接口的返回值如果大于等于 `0`，返回此值，否则返回 `fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError` 异常，包含以下属性：
 
-    * code：错误类型，[点击查看详情](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#consensusprecompiled-0x1003)。
+    * code：错误类型。
     * message：错误信息。
 
 ## 五、CNSService
 
-`CNSService` 是对预编译合约 [CNSPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#cnsprecompiled-0x1004) 的封装。
+[CNSService](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/precompiled/cns_service.rs) 是对预编译合约 [CNSPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#cnsprecompiled-0x1004) 的封装。
 
 ### 5.1 实例化
 
@@ -270,7 +272,7 @@ let cns_service = CNSService::new(&web3_service);
 
 * 接口 `insert` 的返回值如果大于等于 `0`，返回此值，否则返回 `fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError` 异常，包含以下属性：
 
-    * code：错误类型，[点击查看详情](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#cnsprecompiled-0x1004)。
+    * code：错误类型。
     * message：错误信息。
 
 * 接口 `select_by_name` 与 `select_by_name_and_version` 会将返回值由 `string` 转换成 `serde_json::Value` 格式。
@@ -279,7 +281,7 @@ let cns_service = CNSService::new(&web3_service);
 
 ## 六、PermissionService
 
-`PermissionService` 是对预编译合约 [PermissionPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#permissionprecompiled-0x1005) 的封装。
+[PermissionService](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/precompiled/permission_service.rs) 是对预编译合约 [PermissionPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#permissionprecompiled-0x1005) 的封装。
 
 ### 6.1 实例化
 
@@ -307,14 +309,14 @@ let permission_service = PermissionService::new(&web3_service);
 
 * 接口 `insert`、`remove`、`grant_write`、 `revoke_write` 的返回值如果大于等于 `0`，返回此值，否则返回 `fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError` 异常，包含以下属性：
 
-    * code：错误类型，[点击查看详情](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#permissionprecompiled-0x1005)。
+    * code：错误类型。
     * message：错误信息。
 
 * 接口 `query_by_name` 与 `query_permission` 会将返回值由 `string` 转换成 `serde_json::Value` 格式。
 
 ## 七、ContractLifeCycleService
 
-`ContractLifeCycleService` 是对预编译合约 [ContractLifeCyclePrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#contractlifecycleprecompiled-0x1007) 的封装。
+[ContractLifeCycleService](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/precompiled/contract_life_cycle_service.rs) 是对预编译合约 [ContractLifeCyclePrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#contractlifecycleprecompiled-0x1007) 的封装。
 
 ### 7.1 实例化
 
@@ -341,10 +343,61 @@ let contract_life_cycle_service = ContractLifeCycleService::new(&web3_service);
 
 * 接口 `freeze`、`unfreeze`、`grant_manager` 的返回值如果大于等于 `0`，返回此值，否则返回 `fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError` 异常，包含以下属性：
 
-    * code：错误类型，[点击查看详情](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#contractlifecycleprecompiled-0x1007)。
+    * code：错误类型。
     * message：错误信息。
 
-## 八、注意事项
+* 接口 `get_status` 的返回值为 `(i32, String)`，其中如果 `i32` 的值小于 `0`，将返回 `fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError` 异常。
+
+* 接口 `list_manager` 的返回值为 `(i32, Vec<String>)`，其中如果 `i32` 的值小于 `0`，将返回 `fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError` 异常。
+
+## 八、ChainGovernanceService
+
+[ChainGovernanceService](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/precompiled/chain_governance_service.rs) 是对预编译合约 [ChainGovernancePrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#chaingovernanceprecompiled-0x1008) 的封装。
+
+### 8.1 实例化
+
+```rust
+use fisco_bcos_service::{
+    create_web3_service,
+    chain_governance_service::ChainGovernanceService,
+};
+
+let config_file_path = "./configs/config.json";
+let web3_service = create_web3_service(config_file_path).unwrap();
+let chain_governance_service = ChainGovernanceService::new(&web3_service);
+```
+
+### 8.2 接口
+
+* 接口列表：
+
+    * `grant_committee_member`
+    * `revoke_committee_member`
+    * `list_committee_members`
+    * `query_committee_member_weight`
+    * `update_committee_member_weight`
+    * `query_votes_of_member`
+    * `query_votes_of_threshold`
+    * `update_threshold`
+    * `query_threshold`
+    * `grant_operator`
+    * `revoke_operator`
+    * `list_operators`
+    * `freeze_account`
+    * `unfreeze_account`
+    * `get_account_status`
+
+
+* 接口 `grant_committee_member`、`revoke_committee_member`、`update_committee_member_weight`、`update_threshold`、`query_threshold`、`grant_operator`、`revoke_operator`、`freeze_account`、`unfreeze_account` 的返回值如果大于等于 `0`，返回此值，否则返回 `fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError` 异常，包含以下属性：
+
+    * code：错误类型。
+    * message：错误信息。
+
+* 接口 `query_committee_member_weight` 的返回值为 `(bool, i32)`，其中如果 `i32` 的值小于 `0`，将返回 `fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError` 异常。
+
+* 接口 `list_committee_members`、`query_votes_of_member`、`query_votes_of_threshold`、`list_operators` 会将返回值由 `string` 转换成 `serde_json::Value` 格式。
+
+## 九、注意事项
 
 * 所有接口均为异步调用（使用了 Rust 的 [async](https://rust-lang.github.io/async-book/) 特性）。
 
