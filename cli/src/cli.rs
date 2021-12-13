@@ -10,6 +10,7 @@ use fisco_bcos_service::{
     serde_json::{json, Value as JSONValue},
     precompiled::{
         cns_service::CNSService,
+        sql_service::SQLService,
         consensus_service::ConsensusService,
         permission_service::PermissionService,
         system_config_service::SystemConfigService,
@@ -605,6 +606,22 @@ impl Cli {
         };
     }
 
+    async fn call_sql_service(&self, args: &Vec<String>) {
+        let args_length = args.len();
+        match valid_args_len(args_length, 1) {
+            Err(error) => println!("\nError: {:?}\n", error),
+            Ok(_) => {
+                let web3_service = self.web3_service.as_ref().unwrap();
+                let sql_service = SQLService::new(web3_service);
+                let response = sql_service.execute(&args[0]).await;
+                match response {
+                    Err(error) => println!("\nError: {:?}\n", error),
+                    Ok(data) =>  println!("\n{:?}\n", data),
+                };
+            }
+        };
+    }
+
     fn echo_help(&self) {
         println!("\n1. Use set_config function to initialize the environment(e.g., set_config ./config/config.json)");
         println!(
@@ -637,6 +654,7 @@ impl Cli {
                 "chain_governance_service:update_threshold", "chain_governance_service:query_threshold",
                 "chain_governance_service:grant_operator", "chain_governance_service:revoke_operator", "chain_governance_service:list_operators",
                 "chain_governance_service:freeze_account", "chain_governance_service:unfreeze_account", "chain_governance_service:get_account_status",
+                "sql",
             ],
         );
         println!("3. Type help to get help");
@@ -684,6 +702,8 @@ impl Cli {
                         self.call_contract_life_cycle_service(method, &args).await
                     } else if method.starts_with("chain_governance_service:")  {
                         self.call_chain_governance_service(method, &args).await
+                    } else if method.eq("sql") {
+                        self.call_sql_service(&args).await
                     } else {
                         self.call_web3_service(method, &args).await
                     }

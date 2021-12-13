@@ -20,6 +20,9 @@ pub enum PrecompiledServiceError {
     #[error("web3 service error")]
     Web3ServiceError(#[from] Web3ServiceError),
 
+    #[error("sqlparser::parser::ParserError")]
+    SQLParserError(#[from] sqlparser::parser::ParserError),
+
     #[error("hex::FromHexError")]
     FromHexError(#[from] hex::FromHexError),
 
@@ -243,6 +246,24 @@ pub(crate) fn parse_string_token_to_json(tokens: &Option<Vec<Token>>) -> Result<
                     serde_json::from_str(&output)?
                 } else {
                     json!(null)
+                }
+            }
+        }
+    )
+}
+
+pub(crate) fn parse_address_token_to_string(tokens: &Option<Vec<Token>>) -> Result<String, PrecompiledServiceError> {
+    Ok(
+        match tokens {
+            None => String::from(""),
+            Some(tokens) => {
+                if tokens.len() > 0 {
+                    match tokens[0].clone().into_address() {
+                        Some(address) => format!("{:?}", address),
+                        None => String::from(""),
+                    }
+                } else {
+                    String::from("")
                 }
             }
         }

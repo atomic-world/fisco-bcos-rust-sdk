@@ -6,6 +6,7 @@ use crate::precompiled::precompiled_service::{
     call,
     send_transaction,
     parse_string_token_to_json,
+    parse_address_token_to_string,
 };
 
 const ADDRESS: &str = "0x0000000000000000000000000000000000001004";
@@ -70,20 +71,6 @@ impl CNSService<'_> {
             "getContractAddress",
             &params
         ).await?;
-        Ok(
-            match &response.output {
-                None => String::from(""),
-                Some(tokens) => {
-                    if tokens.len() > 0 {
-                        match tokens[0].clone().into_address() {
-                            Some(address) => format!("{:?}", address),
-                            None => String::from(""),
-                        }
-                    } else {
-                        String::from("")
-                    }
-                }
-            }
-        )
+        parse_address_token_to_string(&response.output)
     }
 }
