@@ -29,7 +29,7 @@ fisco-bcos-service = "0.2"
   * [四、TableFactoryService](#四TableFactoryService)
      * [4.1 实例化](#41-实例化)
      * [4.2 接口](#42-接口)
-  * [五、CURDService](#五CURDService)
+  * [五、CRUDService](#五CRUDService)
      * [5.1 实例化](#51-实例化)
      * [5.2 接口](#52-接口)
   * [六、SQLService](#六SQLService)
@@ -258,21 +258,21 @@ let table_factory_service = TableFactoryService::new(&web3_service);
     * message：错误信息。
 
 
-## 五、CURDService
+## 五、CRUDService
 
-[CURDService](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/precompiled/curd_service.rs) 是对预编译合约 [CRUDPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#crudprecompiled-0x1002) 的封装。
+[CRUDService](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/precompiled/crud_service.rs) 是对预编译合约 [CRUDPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#crudprecompiled-0x1002) 的封装。
 
 ### 5.1 实例化
 
 ```rust
 use fisco_bcos_service::{
     create_web3_service,
-    precompiled::curd_service::CURDService,
+    precompiled::crud_service::CRUDService,
 };
 
 let config_file_path = "./configs/config.json";
 let web3_service = create_web3_service(config_file_path).unwrap();
-let curd_service = CURDService::new(&web3_service);
+let crud_service = CRUDService::new(&web3_service);
 ```
 
 ### 5.2 接口
@@ -292,7 +292,7 @@ let curd_service = CURDService::new(&web3_service);
 
 ## 六、SQLService
 
-通过 [SQLService](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/precompiled/sql_service.rs) ，我们可以以 `SQL` 语句的方式来操作上述 `TableFactoryService` 和 `CURDService` 相关接口。
+通过 [SQLService](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/precompiled/sql_service.rs) ，我们可以以 `SQL` 语句的方式来操作上述 `TableFactoryService` 和 `CRUDService` 相关接口。
 
 ### 6.1 实例化
 
