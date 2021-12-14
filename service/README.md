@@ -290,6 +290,8 @@ let crud_service = CRUDService::new(&web3_service);
     * code：错误类型。
     * message：错误信息。
 
+* 接口 `desc` 返回 `(String, Vec<String>)` 类型，其中第一个值为`主键字段`，第二个值为`普通字段`列表。
+
 ## 六、SQLService
 
 通过 [SQLService](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/precompiled/sql_service.rs) ，我们可以以 `SQL` 语句的方式来操作上述 `TableFactoryService` 和 `CRUDService` 相关接口。

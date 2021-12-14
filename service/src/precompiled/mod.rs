@@ -7,3 +7,4 @@ pub mod contract_life_cycle_service;
 pub mod chain_governance_service;
 pub mod table_factory_service;
 pub mod sql_service;
+pub mod crud_service;
