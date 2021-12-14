@@ -48,7 +48,7 @@ impl CRUDService<'_> {
             &params
         ).await?;
         let tokens = response.output.unwrap();
-        let primary_key = tokens[0].clone()
+        let key_field = tokens[0].clone()
             .into_string()
             .unwrap_or(String::from(""));
         let value_fields: Vec<String> = tokens[1].clone()
@@ -59,6 +59,6 @@ impl CRUDService<'_> {
             .map(|v| v.to_string())
             .filter(|v| v.ne(""))
             .collect();
-        Ok((primary_key, value_fields))
+        Ok((key_field, value_fields))
     }
 }

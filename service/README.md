@@ -315,7 +315,8 @@ let sql_service = SQLService::new(&web3_service);
 
     * `execute`
 
-* 通过 `CREATE TABLE` 语句创建表时，将忽略指定的字段类型，并且需指定 `PRIMARY KEY`（有且仅有一个）。
+* 通过 `CREATE TABLE` 语句创建表单时，将忽略指定的字段类型，并且通过指定 `PRIMARY KEY`（有且仅有一个）来设置表单的 `key` 字段。
+* 通过 `INSERT` 语句插入数据时，必须设置 `key` 字段的值。
 
 ## 七、ConsensusService
 

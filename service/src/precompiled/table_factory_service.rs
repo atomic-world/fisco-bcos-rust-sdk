@@ -33,20 +33,20 @@ impl TableFactoryService<'_> {
         parse_address_token_to_string(&response.output)
     }
 
-    pub async fn create_table(&self, table_name: &str, primary_key: &str, fields: &Vec<String>) -> Result<i32, PrecompiledServiceError> {
+    pub async fn create_table(&self, table_name: &str, key_field: &str, fields: &Vec<String>) -> Result<i32, PrecompiledServiceError> {
         if fields.len() == 0 {
             return  Err(PrecompiledServiceError::CustomError {
                 message: String::from("The size of the field must be larger than 0"),
             });
         }
 
-        if fields.contains(&primary_key.to_owned()) {
+        if fields.contains(&key_field.to_owned()) {
             return Err(PrecompiledServiceError::CustomError {
-                message: String::from("The fields should not include the primary_key"),
+                message: format!("The fields should not include the key field {:?}", key_field),
             });
         }
 
-        let params = vec![table_name.to_owned(), primary_key.to_owned(), fields.join(",")];
+        let params = vec![table_name.to_owned(), key_field.to_owned(), fields.join(",")];
         send_transaction(
             self.web3_service,
             "TableFactory",

@@ -1,10 +1,6 @@
 use std::collections::HashMap;
 use serde_json::{json, Value as JSONValue};
-use sqlparser::ast::{
-    ColumnDef, Expr, Ident,
-    ObjectName, SetExpr, Statement,
-    TableConstraint,
-};
+use sqlparser::ast::{ColumnDef, Expr, Ident, ObjectName, SetExpr, Statement, TableConstraint};
 use sqlparser::dialect::GenericDialect;
 use sqlparser::parser::Parser;
 
@@ -26,9 +22,9 @@ impl SQLService<'_> {
         columns: &Vec<ColumnDef>,
         constraints: &Vec<TableConstraint>
     ) -> Result<i32, PrecompiledServiceError> {
-        let mut primary_keys: Vec<String> = vec![];
+        let mut key_fields: Vec<String> = vec![];
         for constraint in constraints {
-            primary_keys.extend(match constraint {
+            key_fields.extend(match constraint {
                 TableConstraint::Unique { is_primary, columns, .. } => {
                     if *is_primary {
                         columns.into_iter().map(|column| column.value.clone()).collect()
@@ -39,32 +35,32 @@ impl SQLService<'_> {
                 _ => vec![],
             });
         }
-        if primary_keys.len() == 0 {
+        if key_fields.len() == 0 {
             return Err(PrecompiledServiceError::CustomError {
-                message: String::from("No primary key specified"),
+                message: String::from("No key field specified"),
             });
         }
 
-        if primary_keys.len() > 1 {
+        if key_fields.len() > 1 {
             return Err(PrecompiledServiceError::CustomError {
-                message: String::from("Primary key specified more than once"),
+                message: String::from("Key field specified more than once"),
             });
         }
 
         let table_name: String = (&name.0)[0].value.clone();
         let fields: Vec<String> = columns.into_iter().map(|column| column.name.value.clone())
-            .filter(|field| !primary_keys.contains(field))
+            .filter(|field| !key_fields.contains(field))
             .collect();
         let table_factory_service = TableFactoryService::new(self.web3_service);
-        Ok(table_factory_service.create_table(&table_name, &primary_keys[0], &fields).await?)
+        Ok(table_factory_service.create_table(&table_name, &key_fields[0], &fields).await?)
     }
 
     async fn fetch_table_fields(&self, table_name: &str) -> Result<(String, Vec<String>), PrecompiledServiceError> {
         let crud_service = CRUDService::new(self.web3_service);
-        let (primary_key, value_fields) = crud_service.desc(&table_name).await?;
+        let (key_field, value_fields) = crud_service.desc(&table_name).await?;
         let mut table_fields: Vec<String> = vec![];
-        if primary_key.len() > 0 {
-            table_fields.push(primary_key.clone());
+        if key_field.len() > 0 {
+            table_fields.push(key_field.clone());
         }
         if value_fields.len() > 0 {
             table_fields.extend(value_fields);
@@ -74,7 +70,7 @@ impl SQLService<'_> {
                 message: format!("Can't fetch fields for table {:?}", table_name),
             })
         } else {
-            Ok((primary_key, table_fields))
+            Ok((key_field, table_fields))
         }
     }
 
@@ -85,7 +81,7 @@ impl SQLService<'_> {
         values: &Vec<Expr>,
     ) -> Result<i32, PrecompiledServiceError> {
         let table_name: String = (&name.0)[0].value.clone();
-        let (primary_key, table_fields) = self.fetch_table_fields(&table_name).await?;
+        let (key_field, table_fields) = self.fetch_table_fields(&table_name).await?;
         let value_fields = if columns.len() > 0 {
             columns.into_iter().map(|column| column.value.clone()).collect()
         } else {
@@ -108,19 +104,25 @@ impl SQLService<'_> {
             });
         }
 
-        let mut primary_key_value: String = String::from("");
+        let mut key_field_value: String = String::from("");
         let mut entry: HashMap<String, String> = HashMap::new();
         for (index, value_field) in value_fields.into_iter().enumerate() {
             if let Expr::Identifier(ident) = &values[index] {
-                if value_field.eq(&primary_key) {
-                    primary_key_value = ident.value.clone();
+                if value_field.eq(&key_field) {
+                    key_field_value = ident.value.clone();
                 } else {
                     entry.insert(value_field, ident.value.clone());
                 }
             }
         }
-        let crud_service = CRUDService::new(self.web3_service);
-        Ok(crud_service.insert(&table_name, &primary_key_value, &entry).await?)
+        if key_field_value.is_empty() {
+            Err(PrecompiledServiceError::CustomError {
+                message: format!("Value of key field {:?} should be provided", key_field),
+            })
+        } else {
+            let crud_service = CRUDService::new(self.web3_service);
+            Ok(crud_service.insert(&table_name, &key_field_value, &entry).await?)
+        }
     }
 
     pub fn new(web3_service: &Web3Service) -> SQLService {
