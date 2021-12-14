@@ -59,7 +59,7 @@ Object({"Build Time": String("20210201 10:15:37"), "Build Type": String("Darwin/
 
 注意事项：
 
-* 方法名与参数、参数与参数之间以`空格`分割（比如：`call HelloWorldV4 0x62195d0f77f66c445c4878b845f55d266875705d get`），如果某个参数内部有空格，使用双引号或单引号包裹（比如：`send_raw_transaction HelloWorldV4 0x62195d0f77f66c445c4878b845f55d266875705d set "hello world"` 或 `send_raw_transaction HelloWorldV4 0x62195d0f77f66c445c4878b845f55d266875705d set 'hello world'`）。
+* 方法名与参数、参数与参数之间以`空格`分割（比如：`call HelloWorldV4 0x62195d0f77f66c445c4878b845f55d266875705d get`），如果某个参数内部有空格（或其它更复杂的格式），使用`单引号`包裹（比如：`send_raw_transaction HelloWorldV4 0x62195d0f77f66c445c4878b845f55d266875705d set 'hello world'`）。
 * `call`、`send_raw_transaction`、`send_raw_transaction_and_get_proof`、`deploy` 方法的签名最后一个参数为 `Vec<Token>`，在调用时直接将其拆分为多个参数，然后以空格分开即可（比如：`send_raw_transaction Person 0x62195d0f77f66c445c4878b845f55d266875705d set 12 Tom`）。
 * `compile` 方法签名的最后一个参数（需要链接的 `libraries`，该参数可不设置）为 `HashMap<String, String>`，在调用时请以 `JSON` 字符串的形式传递（比如：`compile HelloWorldV4 '{"MyLibrary": "0x123456..."}'`）。
 * `generate_group` 的参数请以 `JSON` 字符串的形式传递。

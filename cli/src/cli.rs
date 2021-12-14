@@ -669,7 +669,7 @@ impl Cli {
     pub(crate) async fn run_command(&mut self, command: &str) {
         let re = fancy_regex::Regex::new(r#"(".+"|'.+'|[^\s]+)"#).unwrap();
         let parts: Vec<&str> = re.find_iter(command)
-            .map(|item| item.unwrap().as_str().trim_start_matches(|v| v == '\"' || v == '\'').trim_end_matches(|v| v == '\"' || v == '\''))
+            .map(|item| item.unwrap().as_str().trim_start_matches("'").trim_end_matches("'"))
             .collect();
         let method = parts[0];
         let args: Vec<String> = if parts.len() > 1 {
