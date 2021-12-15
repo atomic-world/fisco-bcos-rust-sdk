@@ -320,7 +320,7 @@ let sql_service = SQLService::new(&web3_service);
 * `CREATE TABLE` 语句中，将忽略指定的字段类型，并且通过指定 `PRIMARY KEY`（有且仅有一个）来设置表单的 `key` 字段。
 * `INSERT` 语句中，必须设置 `key` 字段的值。
 * `SELECT` 语句中，不支持联表查询。
-* `SELECT`、`UPDATE`、`DELETE` 语句中，`where` 语句中必须指定 `key` 字段的值，多个语句之间仅支持 `AND` 操作（比如 `name = "Tom" and age = "18"`），单个条件仅支持 `=、!=、>、<、>=、<=` 操作。
+* `SELECT`、`UPDATE`、`DELETE` 语句中，`where` 语句中必须指定 `key` 字段的值，多个语句之间仅支持 `AND` 操作（比如 `name = "Tom" and age = "18"`），单个条件仅支持 `=、!=、>、<、>=、<=` 操作，条件的值必须为字面值。
 
 ## 七、ConsensusService
 
