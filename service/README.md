@@ -290,6 +290,8 @@ let crud_service = CRUDService::new(&web3_service);
     * code：错误类型。
     * message：错误信息。
 
+* 接口 `select` 会将返回值由 `string` 转换成 `Vec<serde_json::Value>` 格式。
+
 * 接口 `desc` 返回 `(String, Vec<String>)` 类型，其中第一个值为`主键字段`，第二个值为`普通字段`列表。
 
 ## 六、SQLService
@@ -315,8 +317,10 @@ let sql_service = SQLService::new(&web3_service);
 
     * `execute`
 
-* 通过 `CREATE TABLE` 语句创建表单时，将忽略指定的字段类型，并且通过指定 `PRIMARY KEY`（有且仅有一个）来设置表单的 `key` 字段。
-* 通过 `INSERT` 语句插入数据时，必须设置 `key` 字段的值。
+* `CREATE TABLE` 语句中，将忽略指定的字段类型，并且通过指定 `PRIMARY KEY`（有且仅有一个）来设置表单的 `key` 字段。
+* `INSERT` 语句中，必须设置 `key` 字段的值。
+* `SELECT` 语句中，不支持联表查询。
+* `SELECT`、`UPDATE`、`DELETE` 语句中，`where` 语句中必须指定 `key` 字段的值，多个语句之间仅支持 `AND` 操作（比如 `name = "Tom" and age = "18"`），单个条件仅支持 `=、!=、>、<、>=、<=` 操作。
 
 ## 七、ConsensusService
 

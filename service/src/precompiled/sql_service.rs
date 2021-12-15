@@ -1,14 +1,19 @@
 use std::collections::HashMap;
 use serde_json::{json, Value as JSONValue};
-use sqlparser::ast::{ColumnDef, Expr, Ident, ObjectName, SetExpr, Statement, TableConstraint};
+use sqlparser::ast::{
+    BinaryOperator, ColumnDef, Expr, Ident,
+    ObjectName, Query, SelectItem, SetExpr,
+    Statement, TableConstraint, TableFactor,
+    TableWithJoins,
+};
 use sqlparser::dialect::GenericDialect;
 use sqlparser::parser::Parser;
 
 use crate::web3::service::Service as Web3Service;
 use crate::precompiled::{
-    crud_service::CRUDService,
     table_factory_service::TableFactoryService,
     precompiled_service::PrecompiledServiceError,
+    crud_service::{ CRUDService, Condition, ConditionOperator },
 };
 
 pub struct SQLService<'a> {
@@ -16,6 +21,101 @@ pub struct SQLService<'a> {
 }
 
 impl SQLService<'_> {
+    fn get_value_from_expr(&self, expr: &Expr) -> Option<String> {
+        match expr {
+            Expr::Identifier(ident) => Some(ident.value.clone()),
+            Expr::Value(value) => Some(value.clone().to_string()),
+            _ => None,
+        }
+    }
+
+    fn validate_fields(
+        &self,
+        table_name: &str,
+        table_fields: &Vec<String>,
+        expected_fields: &Vec<String>,
+    ) -> Result<(), PrecompiledServiceError> {
+        let invalid_fields: Vec<String> = expected_fields.clone()
+            .into_iter()
+            .filter(|field| !table_fields.contains(field))
+            .collect();
+        if invalid_fields.len() > 0 {
+            Err(PrecompiledServiceError::CustomError {
+                message: format!("Invalid fields {:?} for table {:?}", invalid_fields.join(","), table_name),
+            })
+        } else {
+            Ok(())
+        }
+    }
+
+    fn parse_conditions(&self, selection: &Expr, condition: &mut Condition) {
+        match selection {
+            Expr::BinaryOp { left, op, right } => {
+                // 因多个 where 条件之间仅支持 AND 操作符且单个 where 条件仅包含 =、!=、>、<、>=、<= 操作符。
+                // 故此处可以断定，如果操作符为 AND 时即表示多个 where 条件的连接（比如 name = "Tom" and age = "18"），
+                // 否则即为单个 where 条件的解析（比如 name = "Tom"）。
+                let left = left.as_ref();
+                let right = right.as_ref();
+                match op {
+                    BinaryOperator::And => {
+                        self.parse_conditions(left, condition);
+                        self.parse_conditions(right, condition);
+                    },
+                    _ => {
+                        let key = self.get_value_from_expr(left);
+                        let value = self.get_value_from_expr(right);
+                        if key.is_some() && value.is_some() {
+                            match op {
+                                BinaryOperator::Eq => {
+                                    condition.set_condition(&key.unwrap(), &value.unwrap(), ConditionOperator::Eq);
+                                },
+                                BinaryOperator::NotEq => {
+                                    condition.set_condition(&key.unwrap(), &value.unwrap(), ConditionOperator::NotEq);
+                                },
+                                BinaryOperator::Gt => {
+                                    condition.set_condition(&key.unwrap(), &value.unwrap(), ConditionOperator::Gt);
+                                },
+                                BinaryOperator::Lt => {
+                                    condition.set_condition(&key.unwrap(), &value.unwrap(), ConditionOperator::Lt);
+                                },
+                                BinaryOperator::GtEq => {
+                                    condition.set_condition(&key.unwrap(), &value.unwrap(), ConditionOperator::GtEq);
+                                },
+                                BinaryOperator::LtEq => {
+                                    condition.set_condition(&key.unwrap(), &value.unwrap(), ConditionOperator::LtEq);
+                                },
+                                _ => {},
+                            };
+                        }
+                    }
+                };
+            },
+            _ => {},
+        }
+    }
+
+    async fn fetch_table_fields(&self, table_name: &str) -> Result<(String, Vec<String>), PrecompiledServiceError> {
+        let crud_service = CRUDService::new(self.web3_service);
+        let (key_field, value_fields) = crud_service.desc(&table_name).await?;
+        if key_field.is_empty() {
+            return Err(PrecompiledServiceError::CustomError {
+                message: format!("Can't fetch key field for table {:?}", table_name),
+            });
+        }
+        let mut table_fields: Vec<String> = vec![];
+        table_fields.push(key_field.clone());
+        if value_fields.len() > 0 {
+            table_fields.extend(value_fields);
+        }
+        if table_fields.is_empty() {
+            Err(PrecompiledServiceError::CustomError {
+                message: format!("Can't fetch fields for table {:?}", table_name),
+            })
+        } else {
+            Ok((key_field, table_fields))
+        }
+    }
+
     async fn execute_create_table(
         &self,
         name: &ObjectName,
@@ -55,25 +155,6 @@ impl SQLService<'_> {
         Ok(table_factory_service.create_table(&table_name, &key_fields[0], &fields).await?)
     }
 
-    async fn fetch_table_fields(&self, table_name: &str) -> Result<(String, Vec<String>), PrecompiledServiceError> {
-        let crud_service = CRUDService::new(self.web3_service);
-        let (key_field, value_fields) = crud_service.desc(&table_name).await?;
-        let mut table_fields: Vec<String> = vec![];
-        if key_field.len() > 0 {
-            table_fields.push(key_field.clone());
-        }
-        if value_fields.len() > 0 {
-            table_fields.extend(value_fields);
-        }
-        if table_fields.is_empty() {
-            Err(PrecompiledServiceError::CustomError {
-                message: format!("Can't fetch fields for table {:?}", table_name),
-            })
-        } else {
-            Ok((key_field, table_fields))
-        }
-    }
-
     async fn execute_insert(
         &self,
         name: &ObjectName,
@@ -87,15 +168,7 @@ impl SQLService<'_> {
         } else {
             table_fields.clone()
         };
-        let invalid_fields: Vec<String> = value_fields.clone()
-            .into_iter()
-            .filter(|field| !table_fields.contains(field))
-            .collect();
-        if invalid_fields.len() > 0 {
-            return Err(PrecompiledServiceError::CustomError {
-                message: format!("Invalid fields {:?} for table {:?}", invalid_fields.join(","), table_name),
-            });
-        }
+        let _ = self.validate_fields(&table_name, &table_fields, &value_fields)?;
         let value_length = values.len();
         let value_field_length = value_fields.len();
         if value_length != value_field_length {
@@ -107,12 +180,11 @@ impl SQLService<'_> {
         let mut key_field_value: String = String::from("");
         let mut entry: HashMap<String, String> = HashMap::new();
         for (index, value_field) in value_fields.into_iter().enumerate() {
-            if let Expr::Identifier(ident) = &values[index] {
-                if value_field.eq(&key_field) {
-                    key_field_value = ident.value.clone();
-                } else {
-                    entry.insert(value_field, ident.value.clone());
-                }
+            let value = self.get_value_from_expr(&values[index]).unwrap_or(String::from(""));
+            if value_field.eq(&key_field) {
+                key_field_value = value;
+            } else {
+                entry.insert(value_field, value);
             }
         }
         if key_field_value.is_empty() {
@@ -122,6 +194,102 @@ impl SQLService<'_> {
         } else {
             let crud_service = CRUDService::new(self.web3_service);
             Ok(crud_service.insert(&table_name, &key_field_value, &entry).await?)
+        }
+    }
+
+    async fn execute_query(&self, query: &Query) -> Result<JSONValue, PrecompiledServiceError> {
+        if let SetExpr::Select(select) = &query.body {
+            // 表名解析
+            let from: &Vec<TableWithJoins> = &select.from;
+            if from.len() > 1 {
+                return Err(PrecompiledServiceError::CustomError {
+                    message: "Select from multiple tables is not supported yet".to_string(),
+                });
+            }
+            let table_name = match &from[0].relation {
+                TableFactor::Table { name, .. } => (&name.0)[0].value.clone(),
+                _ => String::from("")
+            };
+            if table_name.len() == 0 {
+                return Err(PrecompiledServiceError::CustomError {
+                    message: "Can't parse table name with the invalid select sql statement".to_string(),
+                });
+            }
+            // 表结构获取
+            let (key_field, table_fields) = self.fetch_table_fields(&table_name).await?;
+
+            // 查询字段解析
+            let projection: &Vec<SelectItem> = &select.projection;
+            let mut select_fields: Vec<String> = match projection.len() {
+                0 => table_fields.clone(),
+                _ => projection.into_iter().map(|item| match item {
+                    SelectItem::UnnamedExpr(expr) => self.get_value_from_expr(&expr).unwrap_or(String::from("")),
+                    _ => String::from(""),
+                }).filter(|v| v.len() > 0).collect(),
+            };
+            if select_fields.len() == 0 {
+                select_fields = table_fields.clone();
+            } else {
+                let _ = self.validate_fields(&table_name, &table_fields, &select_fields)?;
+            }
+
+            // where 条件解析
+            let mut condition = Condition::default();
+            match &select.selection {
+                Some(selection) => self.parse_conditions(selection, &mut condition),
+                None => {},
+            };
+            if !condition.is_key_exist(&key_field) {
+                return Err(PrecompiledServiceError::CustomError {
+                    message: format!("Where condition of key field {:?} should be provided", key_field),
+                });
+            }
+            let condition_fields = condition.get_condition_keys();
+            let _ = self.validate_fields(&table_name, &table_fields, &condition_fields)?;
+
+            // limit offset 条件解析
+            let limit = match &query.limit {
+                Some(limit) => self.get_value_from_expr(limit)
+                    .map(|v| v.parse::<i32>().unwrap_or(-1))
+                    .unwrap_or(-1),
+                None => -1,
+            };
+            let offset = match &query.offset {
+                Some(offset) => self.get_value_from_expr(&offset.value)
+                    .map(|v| v.parse::<i32>().unwrap_or(-1))
+                    .unwrap_or(-1),
+                None => -1,
+            };
+            if limit > -1 && offset > -1 {
+                condition.set_limit(limit as u32, offset as u32);
+            }
+
+            // 数据获取
+            let conditions = condition.get_conditions();
+            let key_value: Vec<String> = conditions.get(&key_field).unwrap().values()
+                .map(|v| v.to_owned())
+                .collect();
+            let crud_service = CRUDService::new(self.web3_service);
+            let records = crud_service.select(&table_name, &key_value[0], &condition).await?;
+
+            // 对数据进行解析，只返回指定字段的数据
+            if select_fields.len() == table_fields.len() {
+                Ok(json!(records))
+            } else {
+                Ok(json!(
+                    records.into_iter().map(|record| {
+                        let mut result = json!({});
+                        for select_field in &select_fields  {
+                            result[select_field.to_owned()] = record.get(select_field).unwrap_or(&json!(null)).clone();
+                        }
+                        result
+                    }).collect::<Vec<JSONValue>>()
+                ))
+            }
+        } else {
+            Err(PrecompiledServiceError::CustomError {
+                message: "Invalid select sql statement".to_string(),
+            })
         }
     }
 
@@ -147,6 +315,7 @@ impl SQLService<'_> {
                     })
                 }
             },
+            Statement::Query(query) =>  self.execute_query(query).await,
             _ => Err(PrecompiledServiceError::CustomError {
                 message: format!("Invalid sql:{:?}", sql),
             })
