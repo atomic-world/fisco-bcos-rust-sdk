@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use serde_json::{json, Value as JSONValue};
 use sqlparser::ast::{
-    BinaryOperator, ColumnDef, Expr, Ident,
-    ObjectName, Query, SelectItem, SetExpr,
-    Statement, TableConstraint, TableFactor,
-    TableWithJoins,
+    Assignment, BinaryOperator,
+    ColumnDef, Expr, Ident, ObjectName,
+    Query, SelectItem, SetExpr, Statement,
+    TableConstraint, TableFactor, TableWithJoins,
 };
 use sqlparser::dialect::GenericDialect;
 use sqlparser::parser::Parser;
@@ -329,6 +329,38 @@ impl SQLService<'_> {
         Ok(crud_service.remove(&table_name, &key_field_value, &condition).await?)
     }
 
+    async fn execute_update(&self, name: &ObjectName, assignments: &Vec<Assignment>, selection: &Option<Expr>) -> Result<i32, PrecompiledServiceError> {
+        let table_name: String = (&name.0)[0].value.clone();
+        let (key_field, table_fields) = self.fetch_table_fields(&table_name).await?;
+
+        let mut entry: HashMap<String, String> = HashMap::new();
+        for assignment in assignments.into_iter() {
+            let key = assignment.id.value.clone();
+            if key_field.eq(&key) {
+                return Err(PrecompiledServiceError::CustomError {
+                    message: format!("Key field {:?} can't be updated", key),
+                });
+            }
+            if !table_fields.contains(&key) {
+                return Err(PrecompiledServiceError::CustomError {
+                    message: format!("There is no field {:?} in table {:?}", key, table_name),
+                });
+            }
+            match self.get_value_from_expr(&assignment.value) {
+                Some(value) => {
+                    entry.insert(key, value);
+                },
+                None => {},
+            };
+        }
+
+        let mut condition = Condition::default();
+        let key_field_value = self.parse_selection(&table_name, &key_field, &table_fields, &selection, &mut condition)?;
+
+        let crud_service = CRUDService::new(self.web3_service);
+        Ok(crud_service.update(&table_name, &key_field_value, &entry, &condition).await?)
+    }
+
     pub fn new(web3_service: &Web3Service) -> SQLService {
         SQLService {
             web3_service
@@ -354,6 +386,9 @@ impl SQLService<'_> {
             Statement::Query(query) =>  self.execute_query(query).await,
             Statement::Delete { table_name, selection } => {
                 Ok(json!(self.execute_delete(table_name, selection).await?))
+            },
+            Statement::Update { table_name, assignments, selection} => {
+                Ok(json!(self.execute_update(table_name, assignments, selection).await?))
             },
             _ => Err(PrecompiledServiceError::CustomError {
                 message: format!("Invalid sql:{:?}", sql),

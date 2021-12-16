@@ -156,6 +156,30 @@ impl CRUDService<'_> {
         )
     }
 
+    pub async fn update(
+        &self,
+        table_name: &str,
+        key_value: &str,
+        entry: &HashMap<String, String>,
+        condition: &Condition,
+    ) -> Result<i32, PrecompiledServiceError> {
+        let params = vec![
+            table_name.to_owned(),
+            key_value.to_owned(),
+            serde_json::to_string(&entry)?,
+            serde_json::to_string(&condition.conditions)?,
+            String::from(""),
+        ];
+        send_transaction(
+            self.web3_service,
+            "CRUDPrecompiled",
+            ADDRESS,
+            ABI_CONTENT,
+            "update",
+            &params
+        ).await
+    }
+
     pub async fn desc(&self, table_name: &str) -> Result<(String, Vec<String>), PrecompiledServiceError> {
         let params = vec![table_name.to_owned()];
         let response = call(
