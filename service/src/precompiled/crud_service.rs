@@ -27,16 +27,12 @@ pub struct Condition {
 }
 
 impl Condition {
-    pub fn get_conditions(&self) -> HashMap<String, HashMap<String, String>> {
-        self.conditions.clone()
-    }
-
     pub fn get_condition_keys(&self) -> Vec<String> {
         self.conditions.keys().map(|key| key.clone()).collect()
     }
 
-    pub fn is_key_exist(&self, key: &str) -> bool {
-        self.conditions.contains_key(key)
+    pub fn get_condition_by_key(&self, key: &str) -> Option<HashMap<String, String>> {
+        self.conditions.get(key).map(|v| v.clone())
     }
 
     pub fn set_condition(&mut self, key: &str, value: &str, operator: ConditionOperator) {
@@ -72,7 +68,7 @@ impl Condition {
                 condition
             },
         };
-        self.conditions.remove(key);
+        self.remove_condition(key);
         self.conditions.insert(key.to_owned(), condition);
     }
 
@@ -83,7 +79,7 @@ impl Condition {
     pub fn set_limit(&mut self, limit: u32, offset: u32) {
         let mut condition: HashMap<String, String> = HashMap::new();
         condition.insert("limit".to_owned(), format!("{:},{:}", limit, offset));
-        self.conditions.remove("limit");
+        self.remove_limit();
         self.conditions.insert("limit".to_owned(), condition);
     }
 
@@ -120,12 +116,28 @@ impl CRUDService<'_> {
         ).await
     }
 
-    pub async fn select(&self, table_name: &str, key_value: &str, condition: &Condition) -> Result<Vec<JSONValue>, PrecompiledServiceError> {
-        let conditions = condition.get_conditions();
+    pub async fn remove(&self, table_name: &str, key_value: &str, condition: &Condition) -> Result<i32, PrecompiledServiceError> {
         let params = vec![
             table_name.to_owned(),
             key_value.to_owned(),
-            serde_json::to_string(&conditions)?,
+            serde_json::to_string(&condition.conditions)?,
+            String::from(""),
+        ];
+        send_transaction(
+            self.web3_service,
+            "CRUDPrecompiled",
+            ADDRESS,
+            ABI_CONTENT,
+            "remove",
+            &params
+        ).await
+    }
+
+    pub async fn select(&self, table_name: &str, key_value: &str, condition: &Condition) -> Result<Vec<JSONValue>, PrecompiledServiceError> {
+        let params = vec![
+            table_name.to_owned(),
+            key_value.to_owned(),
+            serde_json::to_string(&condition.conditions)?,
             String::from(""),
         ];
         let response = call(

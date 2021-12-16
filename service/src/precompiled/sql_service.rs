@@ -29,6 +29,27 @@ impl SQLService<'_> {
         }
     }
 
+    fn get_key_field_value_from_condition(
+        &self,
+        key_field: &str,
+        condition: &Condition,
+    ) -> Result<String, PrecompiledServiceError> {
+        let err = Err(PrecompiledServiceError::CustomError {
+            message: format!("Value of key field {:?} should be provided in where clause", key_field),
+        });
+        match condition.get_condition_by_key(&key_field) {
+            Some(v) => match v.get("eq") {
+                Some(v) => if v.is_empty() {
+                    err
+                } else {
+                    Ok(v.clone())
+                },
+                None => err,
+            },
+            None => err
+        }
+    }
+
     fn validate_fields(
         &self,
         table_name: &str,
@@ -48,7 +69,7 @@ impl SQLService<'_> {
         }
     }
 
-    fn parse_conditions(&self, selection: &Expr, condition: &mut Condition) {
+    fn parse_condition(&self, selection: &Expr, condition: &mut Condition) {
         match selection {
             Expr::BinaryOp { left, op, right } => {
                 // 因多个 where 条件之间仅支持 AND 操作符且单个 where 条件仅包含 =、!=、>、<、>=、<= 操作符。
@@ -58,8 +79,8 @@ impl SQLService<'_> {
                 let right = right.as_ref();
                 match op {
                     BinaryOperator::And => {
-                        self.parse_conditions(left, condition);
-                        self.parse_conditions(right, condition);
+                        self.parse_condition(left, condition);
+                        self.parse_condition(right, condition);
                     },
                     _ => {
                         let key = self.get_value_from_expr(left);
@@ -93,6 +114,25 @@ impl SQLService<'_> {
             _ => {},
         }
     }
+
+    fn parse_selection(
+        &self,
+        table_name: &str,
+        key_field: &str,
+        table_fields: &Vec<String>,
+        selection: &Option<Expr>,
+        condition: &mut Condition,
+    ) -> Result<String, PrecompiledServiceError> {
+        match &selection {
+            Some(selection) => self.parse_condition(selection, condition),
+            None => {},
+        };
+        let key_field_value = self.get_key_field_value_from_condition(&key_field, &condition)?;
+        let condition_fields = condition.get_condition_keys();
+        let _ = self.validate_fields(&table_name, &table_fields, &condition_fields)?;
+        Ok(key_field_value)
+    }
+
 
     async fn fetch_table_fields(&self, table_name: &str) -> Result<(String, Vec<String>), PrecompiledServiceError> {
         let crud_service = CRUDService::new(self.web3_service);
@@ -235,17 +275,7 @@ impl SQLService<'_> {
 
             // where 条件解析
             let mut condition = Condition::default();
-            match &select.selection {
-                Some(selection) => self.parse_conditions(selection, &mut condition),
-                None => {},
-            };
-            if !condition.is_key_exist(&key_field) {
-                return Err(PrecompiledServiceError::CustomError {
-                    message: format!("Where condition of key field {:?} should be provided", key_field),
-                });
-            }
-            let condition_fields = condition.get_condition_keys();
-            let _ = self.validate_fields(&table_name, &table_fields, &condition_fields)?;
+            let key_field_value = self.parse_selection(&table_name, &key_field, &table_fields, &select.selection, &mut condition)?;
 
             // limit offset 条件解析
             let limit = match &query.limit {
@@ -265,13 +295,8 @@ impl SQLService<'_> {
             }
 
             // 数据获取
-            let conditions = condition.get_conditions();
-            let key_value: Vec<String> = conditions.get(&key_field).unwrap().values()
-                .map(|v| v.to_owned())
-                .collect();
             let crud_service = CRUDService::new(self.web3_service);
-            let records = crud_service.select(&table_name, &key_value[0], &condition).await?;
-
+            let records = crud_service.select(&table_name, &key_field_value, &condition).await?;
             // 对数据进行解析，只返回指定字段的数据
             if select_fields.len() == table_fields.len() {
                 Ok(json!(records))
@@ -291,6 +316,17 @@ impl SQLService<'_> {
                 message: "Invalid select sql statement".to_string(),
             })
         }
+    }
+
+    async fn execute_delete(&self, name: &ObjectName, selection: &Option<Expr>) -> Result<i32, PrecompiledServiceError> {
+        let table_name: String = (&name.0)[0].value.clone();
+        let (key_field, table_fields) = self.fetch_table_fields(&table_name).await?;
+
+        let mut condition = Condition::default();
+        let key_field_value = self.parse_selection(&table_name, &key_field, &table_fields, &selection, &mut condition)?;
+
+        let crud_service = CRUDService::new(self.web3_service);
+        Ok(crud_service.remove(&table_name, &key_field_value, &condition).await?)
     }
 
     pub fn new(web3_service: &Web3Service) -> SQLService {
@@ -316,9 +352,12 @@ impl SQLService<'_> {
                 }
             },
             Statement::Query(query) =>  self.execute_query(query).await,
+            Statement::Delete { table_name, selection } => {
+                Ok(json!(self.execute_delete(table_name, selection).await?))
+            },
             _ => Err(PrecompiledServiceError::CustomError {
                 message: format!("Invalid sql:{:?}", sql),
-            })
+            }),
         }
     }
 }
