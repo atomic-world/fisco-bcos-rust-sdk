@@ -13,6 +13,7 @@ Rust SDK 为联盟链平台 [FISCO BCOS](https://github.com/FISCO-BCOS/FISCO-BCO
 # 关键特性
 
 * 提供 [JSON-RPC](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/api.html) 接口。
+* 提供[预编译合约](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html)接口。
 * 支持国密和非国密的 [Channel](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/design/protocol_description.html#channelmessage) 协议。
 * 支持国密和非国密下部署、调用 Solidity 合约接口。
 * 支持合约编译，可将 Solidity 合约编译成 abi 和 bin 文件。
@@ -46,7 +47,6 @@ cp nodes/127.0.0.1/sdk/* ~/workspace/fisco-bcos-rust-sdk/configs/authentication/
 
 * 支持 [AMOP](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/amop_protocol.html)。
 * 支持合约事件监听。
-* 提供[预编译合约接口](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html)。
 
 # License
 

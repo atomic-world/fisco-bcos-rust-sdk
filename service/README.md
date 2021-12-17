@@ -6,7 +6,7 @@ Rust SDK For FISCO BCOS 2.7.0+
 
 ```toml
 [dependencies]
-fisco-bcos-service = "0.2"
+fisco-bcos-service = "0.3"
 ```
 
 此 crate 使用了 [TASSL](https://github.com/jntass/TASSL) 来处理 `TLS` 连接，在 `Linux` 或 `Macos` 下无需做任何额外操作，其他环境下则需要指定以下环境变量：

@@ -1,3 +1,10 @@
+# 0.3.0 2021-12-17
+
+## Features
+
+* 提供[预编译合约](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html)接口。
+
+
 # 0.2.0 2021-11-24
 
 ## Features

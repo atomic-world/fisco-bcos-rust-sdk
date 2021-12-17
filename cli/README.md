@@ -25,7 +25,7 @@ $ fisco-bcos-cli
 执行上述命令，你将进入以下交互页面：
 
 ```shell
-Welcome to Command line tool for FISCO BCOS (V0.2.0). Type help to get help
+Welcome to Command line tool for FISCO BCOS (V0.3.0). Type help to get help
 >>
 ```
 
