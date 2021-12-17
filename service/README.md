@@ -248,11 +248,9 @@ let table_factory_service = TableFactoryService::new(&web3_service);
 
 * 接口列表：
 
-    * `open_table`
     * `create_table`
 
-* 接口 `open_table` 的返回值为指定 `table` 所在地址，如果指定 `table` 不存在，返回：`0x0000000000000000000000000000000000000000`。
-* 接口 `create_table` 的返回值如果大于等于 `0`，返回此值，否则返回 `fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError` 异常，包含以下属性：
+* 以上接口的返回值如果大于等于 `0`，返回此值，否则返回 `fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError` 异常，包含以下属性：
 
     * code：错误类型。
     * message：错误信息。
