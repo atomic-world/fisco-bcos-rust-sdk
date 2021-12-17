@@ -5,6 +5,5 @@ pub mod cns_service;
 pub mod permission_service;
 pub mod contract_life_cycle_service;
 pub mod chain_governance_service;
-pub mod table_factory_service;
+pub mod table_crud_service;
 pub mod sql_service;
-pub mod crud_service;

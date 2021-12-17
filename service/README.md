@@ -26,34 +26,28 @@ fisco-bcos-service = "0.2"
   * [三、SystemConfigService](#三SystemConfigService)
      * [3.1 实例化](#31-实例化)
      * [3.2 接口](#32-接口)
-  * [四、TableFactoryService](#四TableFactoryService)
+  * [四、TableCRUDService](#四TableCRUDService)
      * [4.1 实例化](#41-实例化)
      * [4.2 接口](#42-接口)
-  * [五、CRUDService](#五CRUDService)
+  * [五、SQLService](#五SQLService)
      * [5.1 实例化](#51-实例化)
      * [5.2 接口](#52-接口)
-  * [六、SQLService](#六SQLService)
+  * [六、ConsensusService](#六ConsensusService)
      * [6.1 实例化](#61-实例化)
      * [6.2 接口](#62-接口)
-  * [七、ConsensusService](#七ConsensusService)
+  * [七、CNSService](#七CNSService)
      * [7.1 实例化](#71-实例化)
      * [7.2 接口](#72-接口)
-  * [八、CNSService](#八CNSService)
+  * [八、PermissionService](#八PermissionService)
      * [8.1 实例化](#81-实例化)
      * [8.2 接口](#82-接口)
-  * [九、PermissionService](#九PermissionService)
+  * [九、ContractLifeCycleService](#九ContractLifeCycleService)
      * [9.1 实例化](#91-实例化)
      * [9.2 接口](#92-接口)
-  * [十、ContractLifeCycleService](#十ContractLifeCycleService)
+  * [十、ChainGovernanceService](#十ChainGovernanceService)
      * [10.1 实例化](#101-实例化)
      * [10.2 接口](#102-接口)
-  * [十一、ChainGovernanceService](#十一ChainGovernanceService)
-     * [11.1 实例化](#111-实例化)
-     * [11.2 接口](#112-接口)
-  * [十二、KVTableService](#十二KVTableService)
-     * [12.1 实例化](#121-实例化)
-     * [12.2 接口](#122-接口)
-  * [十三、注意事项](#十三注意事项)
+  * [十一、注意事项](#十三注意事项)
 ## 一、配置
 
 配置文件为包含以下信息的  `json` 文件：
@@ -227,21 +221,21 @@ let system_config_service = SystemConfigService::new(&web3_service);
     * message：错误信息。
 
 
-## 四、TableFactoryService
+## 四、TableCRUDService
 
-[TableFactoryService](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/precompiled/table_factory_service.rs) 是对预编译合约 [TableFactory](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#tablefactoryprecompiled-0x1001) 的封装。
+[TableCRUDService](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/precompiled/table_crud_service.rs) 是对预编译合约 [TableFactory](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#tablefactoryprecompiled-0x1001) 及 [CRUDPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#crudprecompiled-0x1002) 的封装。
 
 ### 4.1 实例化
 
 ```rust
 use fisco_bcos_service::{
     create_web3_service,
-    precompiled::table_factory_service::TableFactoryService,
+    precompiled::table_crud_service::TableCRUDService,
 };
 
 let config_file_path = "./configs/config.json";
 let web3_service = create_web3_service(config_file_path).unwrap();
-let table_factory_service = TableFactoryService::new(&web3_service);
+let table_crud_service = TableCRUDService::new(&web3_service);
 ```
 
 ### 4.2 接口
@@ -249,41 +243,13 @@ let table_factory_service = TableFactoryService::new(&web3_service);
 * 接口列表：
 
     * `create_table`
-
-* 以上接口的返回值如果大于等于 `0`，返回此值，否则返回 `fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError` 异常，包含以下属性：
-
-    * code：错误类型。
-    * message：错误信息。
-
-
-## 五、CRUDService
-
-[CRUDService](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/precompiled/crud_service.rs) 是对预编译合约 [CRUDPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#crudprecompiled-0x1002) 的封装。
-
-### 5.1 实例化
-
-```rust
-use fisco_bcos_service::{
-    create_web3_service,
-    precompiled::crud_service::CRUDService,
-};
-
-let config_file_path = "./configs/config.json";
-let web3_service = create_web3_service(config_file_path).unwrap();
-let crud_service = CRUDService::new(&web3_service);
-```
-
-### 5.2 接口
-
-* 接口列表：
-
     * `insert`
     * `remove`
     * `select`
     * `update`
     * `desc`
 
-* 接口 `insert`、`remove`、`update` 的返回值如果大于等于 `0`，返回此值，否则返回 `fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError` 异常，包含以下属性：
+* 接口 `create_table`、`insert`、`remove`、`update` 的返回值如果大于等于 `0`，返回此值，否则返回 `fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError` 异常，包含以下属性：
 
     * code：错误类型。
     * message：错误信息。
@@ -292,11 +258,11 @@ let crud_service = CRUDService::new(&web3_service);
 
 * 接口 `desc` 返回 `(String, Vec<String>)` 类型，其中第一个值为`主键字段`，第二个值为`普通字段`列表。
 
-## 六、SQLService
+## 五、SQLService
 
-通过 [SQLService](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/precompiled/sql_service.rs) ，我们可以以 `SQL` 语句的方式来操作上述 `TableFactoryService` 和 `CRUDService` 相关接口。
+通过 [SQLService](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/precompiled/sql_service.rs) ，我们可以以 `SQL` 语句的方式来操作 `TableCRUDService` 相关接口。
 
-### 6.1 实例化
+### 5.1 实例化
 
 ```rust
 use fisco_bcos_service::{
@@ -309,7 +275,7 @@ let web3_service = create_web3_service(config_file_path).unwrap();
 let sql_service = SQLService::new(&web3_service);
 ```
 
-### 6.2 接口
+### 5.2 接口
 
 * 接口列表：
 
@@ -320,11 +286,11 @@ let sql_service = SQLService::new(&web3_service);
 * `SELECT` 语句中，不支持联表查询。
 * `SELECT`、`UPDATE`、`DELETE` 语句中，`where` 语句中必须指定 `key` 字段的值，多个语句之间仅支持 `AND` 操作（比如 `name = "Tom" and age = "18"`），单个条件仅支持 `=、!=、>、<、>=、<=` 操作，条件的值必须为字面值。
 
-## 七、ConsensusService
+## 六、ConsensusService
 
 [ConsensusService](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/precompiled/consensus_service.rs) 是对预编译合约 [ConsensusPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#consensusprecompiled-0x1003) 的封装。
 
-### 7.1 实例化
+### 6.1 实例化
 
 ```rust
 use fisco_bcos_service::{
@@ -337,7 +303,7 @@ let web3_service = create_web3_service(config_file_path).unwrap();
 let consensus_service = ConsensusService::new(&web3_service);
 ```
 
-### 7.2 接口
+### 6.2 接口
 
 * 接口列表：
 
@@ -350,11 +316,11 @@ let consensus_service = ConsensusService::new(&web3_service);
     * code：错误类型。
     * message：错误信息。
 
-## 八、CNSService
+## 七、CNSService
 
 [CNSService](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/precompiled/cns_service.rs) 是对预编译合约 [CNSPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#cnsprecompiled-0x1004) 的封装。
 
-### 8.1 实例化
+### 7.1 实例化
 
 ```rust
 use fisco_bcos_service::{
@@ -367,7 +333,7 @@ let web3_service = create_web3_service(config_file_path).unwrap();
 let cns_service = CNSService::new(&web3_service);
 ```
 
-### 8.2 接口
+### 7.2 接口
 
 * 接口列表：
 
@@ -385,11 +351,11 @@ let cns_service = CNSService::new(&web3_service);
 
 * 接口 `get_contract_address` 会将返回值由 `address` 转换成 `String` 格式。
 
-## 九、PermissionService
+## 八、PermissionService
 
 [PermissionService](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/precompiled/permission_service.rs) 是对预编译合约 [PermissionPrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#permissionprecompiled-0x1005) 的封装。
 
-### 9.1 实例化
+### 8.1 实例化
 
 ```rust
 use fisco_bcos_service::{
@@ -402,7 +368,7 @@ let web3_service = create_web3_service(config_file_path).unwrap();
 let permission_service = PermissionService::new(&web3_service);
 ```
 
-### 9.2 接口
+### 8.2 接口
 
 * 接口列表：
 
@@ -420,11 +386,11 @@ let permission_service = PermissionService::new(&web3_service);
 
 * 接口 `query_by_name` 与 `query_permission` 会将返回值由 `string` 转换成 `serde_json::Value` 格式。
 
-## 十、ContractLifeCycleService
+## 九、ContractLifeCycleService
 
 [ContractLifeCycleService](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/precompiled/contract_life_cycle_service.rs) 是对预编译合约 [ContractLifeCyclePrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#contractlifecycleprecompiled-0x1007) 的封装。
 
-### 10.1 实例化
+### 9.1 实例化
 
 ```rust
 use fisco_bcos_service::{
@@ -437,7 +403,7 @@ let web3_service = create_web3_service(config_file_path).unwrap();
 let contract_life_cycle_service = ContractLifeCycleService::new(&web3_service);
 ```
 
-### 10.2 接口
+### 9.2 接口
 
 * 接口列表：
 
@@ -456,11 +422,11 @@ let contract_life_cycle_service = ContractLifeCycleService::new(&web3_service);
 
 * 接口 `list_manager` 的返回值为 `(i32, Vec<String>)`，其中如果 `i32` 的值小于 `0`，将返回 `fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError` 异常。
 
-## 十一、ChainGovernanceService
+## 十、ChainGovernanceService
 
 [ChainGovernanceService](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/precompiled/chain_governance_service.rs) 是对预编译合约 [ChainGovernancePrecompiled](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#chaingovernanceprecompiled-0x1008) 的封装。
 
-### 11.1 实例化
+### 10.1 实例化
 
 ```rust
 use fisco_bcos_service::{
@@ -473,7 +439,7 @@ let web3_service = create_web3_service(config_file_path).unwrap();
 let chain_governance_service = ChainGovernanceService::new(&web3_service);
 ```
 
-### 11.2 接口
+### 10.2 接口
 
 * 接口列表：
 
@@ -503,27 +469,7 @@ let chain_governance_service = ChainGovernanceService::new(&web3_service);
 
 * 接口 `list_committee_members`、`query_votes_of_member`、`query_votes_of_threshold`、`list_operators` 会将返回值由 `string` 转换成 `serde_json::Value` 格式。
 
-
-## 十二、KVTableService
-
-[KVTableService](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/precompiled/kv_table_service.rs) 是对预编译合约 [KVTable](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/precompiled_contract.html#kvtablefactoryprecompiled-0x1010) 的封装。
-
-### 12.1 实例化
-
-```rust
-use fisco_bcos_service::{
-    create_web3_service,
-    kv_table_service::KVTableService,
-};
-
-let config_file_path = "./configs/config.json";
-let web3_service = create_web3_service(config_file_path).unwrap();
-let kv_table_service = KVTableService::new(&web3_service);
-```
-
-### 12.2 接口
-
-## 十三、注意事项
+## 十一、注意事项
 
 * 所有接口均为异步调用（使用了 Rust 的 [async](https://rust-lang.github.io/async-book/) 特性）。
 

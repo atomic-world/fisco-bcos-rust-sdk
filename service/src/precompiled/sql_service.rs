@@ -11,9 +11,8 @@ use sqlparser::parser::Parser;
 
 use crate::web3::service::Service as Web3Service;
 use crate::precompiled::{
-    table_factory_service::TableFactoryService,
     precompiled_service::PrecompiledServiceError,
-    crud_service::{ CRUDService, Condition, ConditionOperator },
+    table_crud_service::{ TableCRUDService, Condition, ConditionOperator },
 };
 
 pub struct SQLService<'a> {
@@ -135,8 +134,8 @@ impl SQLService<'_> {
 
 
     async fn fetch_table_fields(&self, table_name: &str) -> Result<(String, Vec<String>), PrecompiledServiceError> {
-        let crud_service = CRUDService::new(self.web3_service);
-        let (key_field, value_fields) = crud_service.desc(&table_name).await?;
+        let table_crud_service = TableCRUDService::new(self.web3_service);
+        let (key_field, value_fields) = table_crud_service.desc(&table_name).await?;
         if key_field.is_empty() {
             return Err(PrecompiledServiceError::CustomError {
                 message: format!("Can't fetch key field for table {:?}", table_name),
@@ -191,8 +190,8 @@ impl SQLService<'_> {
         let fields: Vec<String> = columns.into_iter().map(|column| column.name.value.clone())
             .filter(|field| !key_fields.contains(field))
             .collect();
-        let table_factory_service = TableFactoryService::new(self.web3_service);
-        Ok(table_factory_service.create_table(&table_name, &key_fields[0], &fields).await?)
+        let table_crud_service = TableCRUDService::new(self.web3_service);
+        Ok(table_crud_service.create_table(&table_name, &key_fields[0], &fields).await?)
     }
 
     async fn execute_insert(
@@ -232,8 +231,8 @@ impl SQLService<'_> {
                 message: format!("Value of key field {:?} should be provided", key_field),
             })
         } else {
-            let crud_service = CRUDService::new(self.web3_service);
-            Ok(crud_service.insert(&table_name, &key_field_value, &entry).await?)
+            let table_crud_service = TableCRUDService::new(self.web3_service);
+            Ok(table_crud_service.insert(&table_name, &key_field_value, &entry).await?)
         }
     }
 
@@ -295,8 +294,8 @@ impl SQLService<'_> {
             }
 
             // 数据获取
-            let crud_service = CRUDService::new(self.web3_service);
-            let records = crud_service.select(&table_name, &key_field_value, &condition).await?;
+            let table_crud_service = TableCRUDService::new(self.web3_service);
+            let records = table_crud_service.select(&table_name, &key_field_value, &condition).await?;
             // 对数据进行解析，只返回指定字段的数据
             if select_fields.len() == table_fields.len() {
                 Ok(json!(records))
@@ -325,8 +324,8 @@ impl SQLService<'_> {
         let mut condition = Condition::default();
         let key_field_value = self.parse_selection(&table_name, &key_field, &table_fields, &selection, &mut condition)?;
 
-        let crud_service = CRUDService::new(self.web3_service);
-        Ok(crud_service.remove(&table_name, &key_field_value, &condition).await?)
+        let table_crud_service = TableCRUDService::new(self.web3_service);
+        Ok(table_crud_service.remove(&table_name, &key_field_value, &condition).await?)
     }
 
     async fn execute_update(&self, name: &ObjectName, assignments: &Vec<Assignment>, selection: &Option<Expr>) -> Result<i32, PrecompiledServiceError> {
@@ -357,8 +356,8 @@ impl SQLService<'_> {
         let mut condition = Condition::default();
         let key_field_value = self.parse_selection(&table_name, &key_field, &table_fields, &selection, &mut condition)?;
 
-        let crud_service = CRUDService::new(self.web3_service);
-        Ok(crud_service.update(&table_name, &key_field_value, &entry, &condition).await?)
+        let table_crud_service = TableCRUDService::new(self.web3_service);
+        Ok(table_crud_service.update(&table_name, &key_field_value, &entry, &condition).await?)
     }
 
     pub fn new(web3_service: &Web3Service) -> SQLService {
@@ -389,6 +388,11 @@ impl SQLService<'_> {
             },
             Statement::Update { table_name, assignments, selection} => {
                 Ok(json!(self.execute_update(table_name, assignments, selection).await?))
+            },
+            Statement::ShowColumns { table_name,.. } => {
+                let table_name: String = (&table_name.0)[0].value.clone();
+                let table_crud_service = TableCRUDService::new(self.web3_service);
+                Ok(json!(table_crud_service.desc(&table_name).await?))
             },
             _ => Err(PrecompiledServiceError::CustomError {
                 message: format!("Invalid sql:{:?}", sql),

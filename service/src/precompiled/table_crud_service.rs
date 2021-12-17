@@ -9,8 +9,11 @@ use crate::precompiled::precompiled_service::{
     parse_string_token_to_json,
 };
 
-const ADDRESS: &str = "0x0000000000000000000000000000000000001002";
-const ABI_CONTENT: &str = r#"[{"constant":false,"inputs":[{"name":"tableName","type":"string"},{"name":"key","type":"string"},{"name":"entry","type":"string"},{"name":"condition","type":"string"},{"name":"","type":"string"}],"name":"update","outputs":[{"name":"","type":"int256"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"tableName","type":"string"}],"name":"desc","outputs":[{"name":"","type":"string"},{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"tableName","type":"string"},{"name":"key","type":"string"},{"name":"condition","type":"string"},{"name":"","type":"string"}],"name":"select","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"tableName","type":"string"},{"name":"key","type":"string"},{"name":"entry","type":"string"},{"name":"","type":"string"}],"name":"insert","outputs":[{"name":"","type":"int256"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"tableName","type":"string"},{"name":"key","type":"string"},{"name":"condition","type":"string"},{"name":"","type":"string"}],"name":"remove","outputs":[{"name":"","type":"int256"}],"payable":false,"stateMutability":"nonpayable","type":"function"}]"#;
+const TABLE_FACTORY_ADDRESS: &str = "0x0000000000000000000000000000000000001001";
+const TABLE_FACTORY_ABI_CONTENT: &str = r#"[{"constant":false,"inputs":[{"name":"","type":"string"},{"name":"","type":"string"},{"name":"","type":"string"}],"name":"createTable","outputs":[{"name":"","type":"int256"}],"payable":false,"stateMutability":"nonpayable","type":"function"}]"#;
+
+const CRUD_ADDRESS: &str = "0x0000000000000000000000000000000000001002";
+const CRUD_ABI_CONTENT: &str = r#"[{"constant":false,"inputs":[{"name":"tableName","type":"string"},{"name":"key","type":"string"},{"name":"entry","type":"string"},{"name":"condition","type":"string"},{"name":"","type":"string"}],"name":"update","outputs":[{"name":"","type":"int256"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"tableName","type":"string"}],"name":"desc","outputs":[{"name":"","type":"string"},{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"tableName","type":"string"},{"name":"key","type":"string"},{"name":"condition","type":"string"},{"name":"","type":"string"}],"name":"select","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"tableName","type":"string"},{"name":"key","type":"string"},{"name":"entry","type":"string"},{"name":"","type":"string"}],"name":"insert","outputs":[{"name":"","type":"int256"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"tableName","type":"string"},{"name":"key","type":"string"},{"name":"condition","type":"string"},{"name":"","type":"string"}],"name":"remove","outputs":[{"name":"","type":"int256"}],"payable":false,"stateMutability":"nonpayable","type":"function"}]"#;
 
 pub enum ConditionOperator {
     Eq,
@@ -88,18 +91,52 @@ impl Condition {
     }
 }
 
-pub struct CRUDService<'a> {
+pub struct TableCRUDService<'a> {
     web3_service: &'a Web3Service,
 }
 
-impl CRUDService<'_> {
-    pub fn new(web3_service: &Web3Service) -> CRUDService {
-        CRUDService {
+impl TableCRUDService<'_> {
+    pub fn new(web3_service: &Web3Service) -> TableCRUDService {
+        TableCRUDService {
             web3_service
         }
     }
 
-    pub async fn insert(&self, table_name: &str, key_value: &str, entry: &HashMap<String, String>) -> Result<i32, PrecompiledServiceError> {
+    pub async fn create_table(
+        &self,
+        table_name: &str,
+        key_field: &str,
+        fields: &Vec<String>,
+    ) -> Result<i32, PrecompiledServiceError> {
+        if fields.len() == 0 {
+            return  Err(PrecompiledServiceError::CustomError {
+                message: String::from("The size of the fields must be larger than 0"),
+            });
+        }
+
+        if fields.contains(&key_field.to_owned()) {
+            return Err(PrecompiledServiceError::CustomError {
+                message: format!("The fields should not include the key field {:?}", key_field),
+            });
+        }
+
+        let params = vec![table_name.to_owned(), key_field.to_owned(), fields.join(",")];
+        send_transaction(
+            self.web3_service,
+            "TableFactory",
+            TABLE_FACTORY_ADDRESS,
+            TABLE_FACTORY_ABI_CONTENT,
+            "createTable",
+            &params
+        ).await
+    }
+
+    pub async fn insert(
+        &self,
+        table_name: &str,
+        key_value: &str,
+        entry: &HashMap<String, String>,
+    ) -> Result<i32, PrecompiledServiceError> {
         let params = vec![
             table_name.to_owned(),
             key_value.to_owned(),
@@ -109,14 +146,19 @@ impl CRUDService<'_> {
         send_transaction(
             self.web3_service,
             "CRUDPrecompiled",
-            ADDRESS,
-            ABI_CONTENT,
+            CRUD_ADDRESS,
+            CRUD_ABI_CONTENT,
             "insert",
             &params
         ).await
     }
 
-    pub async fn remove(&self, table_name: &str, key_value: &str, condition: &Condition) -> Result<i32, PrecompiledServiceError> {
+    pub async fn remove(
+        &self,
+        table_name: &str,
+        key_value: &str,
+        condition: &Condition,
+    ) -> Result<i32, PrecompiledServiceError> {
         let params = vec![
             table_name.to_owned(),
             key_value.to_owned(),
@@ -126,14 +168,19 @@ impl CRUDService<'_> {
         send_transaction(
             self.web3_service,
             "CRUDPrecompiled",
-            ADDRESS,
-            ABI_CONTENT,
+            CRUD_ADDRESS,
+            CRUD_ABI_CONTENT,
             "remove",
             &params
         ).await
     }
 
-    pub async fn select(&self, table_name: &str, key_value: &str, condition: &Condition) -> Result<Vec<JSONValue>, PrecompiledServiceError> {
+    pub async fn select(
+        &self,
+        table_name: &str,
+        key_value: &str,
+        condition: &Condition,
+    ) -> Result<Vec<JSONValue>, PrecompiledServiceError> {
         let params = vec![
             table_name.to_owned(),
             key_value.to_owned(),
@@ -143,8 +190,8 @@ impl CRUDService<'_> {
         let response = call(
             self.web3_service,
             "CRUDPrecompiled",
-            ADDRESS,
-            ABI_CONTENT,
+            CRUD_ADDRESS,
+            CRUD_ABI_CONTENT,
             "select",
             &params
         ).await?;
@@ -173,8 +220,8 @@ impl CRUDService<'_> {
         send_transaction(
             self.web3_service,
             "CRUDPrecompiled",
-            ADDRESS,
-            ABI_CONTENT,
+            CRUD_ADDRESS,
+            CRUD_ABI_CONTENT,
             "update",
             &params
         ).await
@@ -185,8 +232,8 @@ impl CRUDService<'_> {
         let response = call(
             self.web3_service,
             "CRUDPrecompiled",
-            ADDRESS,
-            ABI_CONTENT,
+            CRUD_ADDRESS,
+            CRUD_ABI_CONTENT,
             "desc",
             &params
         ).await?;
