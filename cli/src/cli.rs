@@ -17,7 +17,7 @@ use fisco_bcos_service::{
         chain_governance_service::ChainGovernanceService,
         contract_life_cycle_service::ContractLifeCycleService,
     },
-    web3::{service::Service as Web3Service, service_error::ServiceError as Web3ServiceError},
+    web3::service::{Service as Web3Service, ServiceError as Web3ServiceError},
 };
 use fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError;
 

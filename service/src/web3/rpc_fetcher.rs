@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use hyper::{Body, Client};
 use hyper::http::{Request, Method};
 use crate::web3::{
-    service_error::ServiceError,
+    service::ServiceError,
     fetcher_trait::{FetcherTrait, parse_response},
 };
 

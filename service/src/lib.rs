@@ -6,18 +6,17 @@ pub mod helpers;
 pub mod tassl;
 pub mod config;
 pub mod precompiled;
+pub mod channel;
 
 pub use ethabi;
 pub use serde_json;
 
-use std::{fs, path::Path};
 use web3::{
-    service::Service as Web3Service,
-    service_error::ServiceError as Web3ServiceError,
     rpc_fetcher::RPCFetcher as Web3RPCFetcher,
     channel_fetcher::ChannelFetcher as Web3ChannelFetcher,
+    service::{ Service as Web3Service, ServiceError as Web3ServiceError },
 };
-use config::Config;
+use config::{Config, create_config_with_file};
 
 ///
 /// 根据配置文件创建 web3 service 服务实例。
@@ -52,9 +51,7 @@ use config::Config;
 /// ```
 ///
 pub fn create_web3_service(config_file_path: &str) -> Result<Web3Service, Web3ServiceError>  {
-    let config_path = Path::new(config_file_path);
-    let mut config: Config = serde_json::from_slice(fs::read(config_path)?.as_slice())?;
-    config.convert_paths(config_path.parent().unwrap());
+    let config = create_config_with_file(config_file_path)?;
     if config.service_type.eq("rpc") {
         let fetcher = Web3RPCFetcher::new(&config.node.host, config.node.port);
         Web3Service::new(&config, Box::new(fetcher)

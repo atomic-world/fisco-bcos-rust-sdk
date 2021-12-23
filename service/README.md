@@ -170,7 +170,7 @@ let web3_service = create_web3_service(config_file_path).unwrap();
     * `get_batch_receipts_by_block_number_and_range`
     * `get_batch_receipts_by_block_hash_and_range`
 
-* 接口将 [FISCO BCOS JSON-RPC](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/api.html) 返回的 `error` 属性转换成了 `fisco_bcos_service::web3::service_error::ServiceError::FiscoBcosError` 异常并返回，包含以下属性：
+* 接口将 [FISCO BCOS JSON-RPC](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/api.html) 返回的 `error` 属性转换成了 `fisco_bcos_service::web3::service::ServiceError::FiscoBcosError` 异常并返回，包含以下属性：
 
     * code：错误类型，详情参见：[错误码描述](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/api.html#id2)。
     * message：错误信息。

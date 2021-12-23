@@ -1,14 +1,17 @@
+use thiserror::Error;
 use ethabi::Token;
 use std::process::Command;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use serde_json::{Value as JSONValue, json};
 
-use crate::abi::ABI;
+use crate::tassl::TASSLError;
+use crate::channel::ChannelError;
 use crate::config::Config;
-use crate::transaction::get_sign_transaction_data;
-use crate::account::{Account, create_account_from_pem};
-use crate::web3::{fetcher_trait::FetcherTrait, service_error::ServiceError};
+use crate::web3::fetcher_trait::FetcherTrait;
+use crate::abi::{ABI, ABIError};
+use crate::transaction::{TransactionError, get_sign_transaction_data};
+use crate::account::{Account, AccountError, create_account_from_pem};
 use crate::helpers::{parse_json_string, parse_json_string_array, convert_hex_str_to_u32};
 
 fn generate_request_params(method: &str, params: &JSONValue) -> JSONValue {
@@ -18,6 +21,50 @@ fn generate_request_params(method: &str, params: &JSONValue) -> JSONValue {
         "method": method.to_owned(),
         "params": params.clone(),
     })
+}
+
+#[derive(Error, Debug)]
+pub enum ServiceError {
+    #[error("std::io::Error")]
+    StdIOError(#[from] std::io::Error),
+
+    #[error("hyper::Error")]
+    HyperError(#[from] hyper::Error),
+
+    #[error("hyper::http::Error")]
+    HyperHttpError(#[from] hyper::http::Error),
+
+    #[error("serde_json::Error")]
+    SerdeJsonError(#[from] serde_json::Error),
+
+    #[error("std::str::Utf8Error")]
+    StrFromUtf8Error(#[from] std::str::Utf8Error),
+
+    #[error("channel error")]
+    ChannelError(#[from] ChannelError),
+
+    #[error("tassl error")]
+    TASSLError(#[from] TASSLError),
+
+    #[error("abi error")]
+    ABIError(#[from] ABIError),
+
+    #[error("account error")]
+    AccountError(#[from] AccountError),
+
+    #[error("transaction error")]
+    TransactionError(#[from] TransactionError),
+
+    #[error("fisco bcos custom error")]
+    CustomError {
+        message: String,
+    },
+
+    #[error("fisco bcos response error")]
+    FiscoBcosError {
+        code: i32,
+        message: String,
+    }
 }
 
 #[derive(Debug)]

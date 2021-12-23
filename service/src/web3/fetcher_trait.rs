@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use serde_json::Value as JSONValue;
-use crate::web3::service_error::ServiceError;
+use crate::web3::service::ServiceError;
 
 pub fn parse_response(response: &JSONValue) -> Result<JSONValue, ServiceError> {
     let result = &response["result"];

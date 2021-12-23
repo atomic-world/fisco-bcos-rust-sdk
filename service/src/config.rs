@@ -78,3 +78,10 @@ impl Config {
         };
     }
 }
+
+pub fn create_config_with_file(config_file_path: &str) -> Result<Config, std::io::Error> {
+    let config_path = Path::new(config_file_path);
+    let mut config: Config = serde_json::from_slice(fs::read(config_path)?.as_slice())?;
+    config.convert_paths(config_path.parent().unwrap());
+    Ok(config)
+}

@@ -7,7 +7,7 @@ use serde_json::{json, Value as JSONValue};
 
 use crate::abi::{ABI, ABIError};
 use crate::helpers::parse_json_string;
-use crate::web3::{service::{Service as Web3Service, CallResponse}, service_error::ServiceError as Web3ServiceError};
+use crate::web3::service::{Service as Web3Service, ServiceError as Web3ServiceError, CallResponse};
 
 #[derive(Error, Debug)]
 pub enum PrecompiledServiceError {
