@@ -16,10 +16,11 @@ use fisco_bcos_service::{
         system_config_service::SystemConfigService,
         chain_governance_service::ChainGovernanceService,
         contract_life_cycle_service::ContractLifeCycleService,
+        precompiled_service::PrecompiledServiceError,
     },
+    event::event_service::EventService,
     web3::service::{Service as Web3Service, ServiceError as Web3ServiceError},
 };
-use fisco_bcos_service::precompiled::precompiled_service::PrecompiledServiceError;
 
 fn valid_args_len(args_length: usize, min_len: usize) -> Result<(), Web3ServiceError> {
     if args_length < min_len {
@@ -622,6 +623,29 @@ impl Cli {
         };
     }
 
+    async fn call_event_service(&self, method: &str, args: &Vec<String>) {
+        let config = self.config.as_ref().unwrap();
+        let mut event_service = EventService::new(&config);
+
+        match method {
+            "event:block_notify" => {
+                let group_id = if args.len() == 0 {
+                    config.group_id
+                } else {
+                    convert_str_to_number::<u32>(&args[0], config.group_id)
+                };
+                event_service.register_block_notify_listener(group_id, |result| {
+                    match result {
+                        Err(error) => println!("\nError: {:?}\n", error),
+                        Ok(data) =>  println!("\n{:?}\n", data),
+                    };
+                });
+                event_service.run_block_notify(group_id).await;
+            },
+            command => println!("\nError: Unavailable command {:?}\n", command),
+        };
+    }
+
     fn echo_help(&self) {
         println!("\n1. Use set_config function to initialize the environment(e.g., set_config ./config/config.json)");
         println!(
@@ -654,7 +678,7 @@ impl Cli {
                 "chain_governance_service:update_threshold", "chain_governance_service:query_threshold",
                 "chain_governance_service:grant_operator", "chain_governance_service:revoke_operator", "chain_governance_service:list_operators",
                 "chain_governance_service:freeze_account", "chain_governance_service:unfreeze_account", "chain_governance_service:get_account_status",
-                "sql",
+                "sql", "event:block_notify",
             ],
         );
         println!("3. Type help to get help");
@@ -687,7 +711,7 @@ impl Cli {
                 }
             },
             _ => {
-                if self.web3_service.is_none() {
+                if self.config.is_none() {
                     println!("\nError: Please initialize the environment with set_config function first\n");
                 } else {
                     if method.starts_with("system_config:") {
@@ -702,6 +726,8 @@ impl Cli {
                         self.call_contract_life_cycle_service(method, &args).await
                     } else if method.starts_with("chain_governance_service:")  {
                         self.call_chain_governance_service(method, &args).await
+                    } else if method.starts_with("event:") {
+                        self.call_event_service(method, &args).await
                     } else if method.eq("sql") {
                         self.call_sql_service(&args).await
                     } else {

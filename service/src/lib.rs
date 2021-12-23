@@ -6,6 +6,7 @@ pub mod helpers;
 pub mod tassl;
 pub mod config;
 pub mod precompiled;
+pub mod event;
 pub mod channel;
 
 pub use ethabi;
