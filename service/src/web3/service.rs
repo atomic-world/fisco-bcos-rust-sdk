@@ -8,11 +8,11 @@ use serde_json::{Value as JSONValue, json};
 use crate::tassl::TASSLError;
 use crate::channel::ChannelError;
 use crate::config::Config;
-use crate::web3::fetcher_trait::FetcherTrait;
 use crate::abi::{ABI, ABIError};
 use crate::transaction::{TransactionError, get_sign_transaction_data};
 use crate::account::{Account, AccountError, create_account_from_pem};
 use crate::helpers::{parse_json_string, parse_json_string_array, convert_hex_str_to_u32};
+use crate::web3::{fetcher_trait::FetcherTrait, rpc_fetcher::RPCFetcher, channel_fetcher::ChannelFetcher};
 
 fn generate_request_params(method: &str, params: &JSONValue) -> JSONValue {
     json!({
@@ -562,5 +562,16 @@ impl Service {
             &json!([self.config.group_id, block_hash, from, count, compress_flag]),
         );
         Ok(self.fetcher.fetch(&params).await?)
+    }
+}
+
+pub fn create_service_with_config(config: &Config) -> Result<Service, ServiceError>  {
+    if config.service_type.eq("rpc") {
+        let fetcher = RPCFetcher::new(&config.node.host, config.node.port);
+        Service::new(&config, Box::new(fetcher)
+        )
+    } else {
+        let fetcher = ChannelFetcher::new(&config);
+        Service::new(&config, Box::new(fetcher))
     }
 }

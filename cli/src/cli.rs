@@ -3,11 +3,17 @@ use std::{
     collections::HashMap,
 };
 use fisco_bcos_service::{
-    create_web3_service,
     abi::ABI,
     config::Config,
     ethabi::token::Token,
-    serde_json::{json, Value as JSONValue},
+    serde_json::{
+        json,
+        Value as JSONValue,
+    },
+    web3::service::{
+        Service as Web3Service,
+        ServiceError as Web3ServiceError,
+    },
     precompiled::{
         cns_service::CNSService,
         sql_service::SQLService,
@@ -19,7 +25,8 @@ use fisco_bcos_service::{
         precompiled_service::PrecompiledServiceError,
     },
     event::event_service::EventService,
-    web3::service::{Service as Web3Service, ServiceError as Web3ServiceError},
+    create_config_with_file,
+    create_web3_service_with_config,
 };
 
 fn valid_args_len(args_length: usize, min_len: usize) -> Result<(), Web3ServiceError> {
@@ -93,12 +100,17 @@ pub(crate) struct Cli {
 
 impl Cli {
     fn set_config(&mut self, config_path: &str) {
-        match create_web3_service(config_path) {
-            Ok(web3_service) => {
-                self.config = Some(web3_service.get_config());
-                self.web3_service = Some(web3_service);
+        match create_config_with_file(config_path) {
+            Ok(config) => {
+                match create_web3_service_with_config(&config) {
+                    Ok(web3_service) => {
+                        self.web3_service = Some(web3_service);
+                    },
+                    Err(error) =>  println!("\n Web3 Service initialize error: {:?}\n", error),
+                };
+                self.config = Some(config);
             },
-            Err(error) => println!("\n Web3 Service initialize error: {:?}\n", error),
+            Err(error) => println!("\n Config initialize error: {:?}\n", error),
         };
     }
 
@@ -623,10 +635,9 @@ impl Cli {
         };
     }
 
-    async fn call_event_service(&self, method: &str, args: &Vec<String>) {
+    async fn call_event_service(&mut self, method: &str, args: &Vec<String>) {
         let config = self.config.as_ref().unwrap();
-        let mut event_service = EventService::new(&config);
-
+        let mut event_service = EventService::new(config);
         match method {
             "event:block_notify" => {
                 let group_id = if args.len() == 0 {
@@ -634,13 +645,23 @@ impl Cli {
                 } else {
                     convert_str_to_number::<u32>(&args[0], config.group_id)
                 };
+                let sleep_seconds = if args.len() >= 2 {
+                    convert_str_to_number::<u32>(&args[1], 1)
+                } else {
+                    1
+                };
+                let max_retry_times = if args.len() == 3 {
+                    convert_str_to_number::<i32>(&args[2], -1)
+                } else {
+                    -1
+                };
                 event_service.register_block_notify_listener(group_id, |result| {
                     match result {
                         Err(error) => println!("\nError: {:?}\n", error),
                         Ok(data) =>  println!("\n{:?}\n", data),
                     };
                 });
-                event_service.run_block_notify(group_id).await;
+                event_service.run_block_notify_loop(group_id, sleep_seconds, max_retry_times).await;
             },
             command => println!("\nError: Unavailable command {:?}\n", command),
         };
