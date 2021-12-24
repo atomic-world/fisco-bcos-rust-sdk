@@ -1,4 +1,4 @@
-use std::{thread, u8};
+use std::thread;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use thiserror::Error;
@@ -7,7 +7,7 @@ use serde_json::{Value as JSONValue, json};
 use crate::config::Config;
 use crate::tassl::TASSLError;
 use crate::event::event_emitter::EventEmitter;
-use crate::channel::{MessageType, ChannelError, channel_read, pack_channel_message, open_tassl};
+use crate::channel::{MessageType, ChannelError, channel_read, pack_channel_message, open_tassl, parse_block_notify_data};
 
 type ListenerResult = Result<JSONValue, EventServiceError>;
 
@@ -78,7 +78,6 @@ impl EventService {
         sleep_seconds: u32,
         max_retry_times: i32,
     ) {
-        self.set_block_notify_loop_status(group_id, true);
         match open_tassl(&self.config) {
             Ok(tassl) => {
                 let params = json!([format!("_block_notify_{:?}", group_id)]);
@@ -89,52 +88,40 @@ impl EventService {
                 match tassl.write(&request_data) {
                     Ok(_) => {
                         let mut remain_retry_times = max_retry_times;
-                        loop {
-                            if self.get_block_notify_loop_status(group_id) {
-                                let response = channel_read(&tassl).map(|buffer| {
-                                    let topic_len = u8::from_be_bytes(buffer[0].to_be_bytes()) as usize;
-                                    let values: Vec<String> = std::str::from_utf8(&buffer[topic_len..])
-                                        .unwrap_or("")
-                                        .to_string()
-                                        .split(",")
-                                        .into_iter()
-                                        .map(|v| v.to_string())
-                                        .collect();
-                                    json!({
-                                        "group_id": String::from(&values[0]).parse::<i32>().unwrap_or(-1),
-                                        "block_height": String::from(&values[1]).parse::<i32>().unwrap_or(-1)
-                                    })
-                                });
-                                match response {
-                                    Ok(value) => {
-                                        remain_retry_times = max_retry_times;
+                        self.set_block_notify_loop_status(group_id, true);
+                        while self.get_block_notify_loop_status(group_id) {
+                            match channel_read(&tassl).map(parse_block_notify_data) {
+                                Ok(value) => {
+                                    remain_retry_times = max_retry_times;
+                                    self.block_notify_event_emitter.emit(
+                                        &group_id.to_string(),
+                                        &Ok(value),
+                                    );
+                                },
+                                Err(err) => {
+                                    if max_retry_times != -1 && remain_retry_times == 0 {
+                                        let err = EventServiceError::CustomError {
+                                            message: format!(
+                                                "SSL_read invoked had failed over {:?} times, stopping the loop now",
+                                                max_retry_times
+                                            ),
+                                        };
                                         self.block_notify_event_emitter.emit(
                                             &group_id.to_string(),
-                                            &Ok(value),
+                                            &Err(err),
                                         );
-                                    },
-                                    Err(err) => {
+                                        self.stop_block_notify_loop(group_id);
+                                        break;
+                                    } else {
                                         self.block_notify_event_emitter.emit(
                                             &group_id.to_string(),
                                             &Err(EventServiceError::ChannelError(err)),
                                         );
-                                        if max_retry_times != -1 && remain_retry_times == 0 {
-                                            self.stop_block_notify_loop(group_id);
-                                            break;
-                                        } else {
-                                            remain_retry_times -= 1;
-                                            thread::sleep(Duration::from_millis((sleep_seconds * 1000) as u64));
-                                        }
-                                    },
-                                };
-                            } else {
-                                let err = EventServiceError::CustomError {
-                                    message: format!("block_notify_loop for group {:?} is stopped", group_id),
-                                };
-                                self.block_notify_event_emitter.emit(&group_id.to_string(), &Err(err));
-                                self.stop_block_notify_loop(group_id);
-                                break;
-                            }
+                                        remain_retry_times -= 1;
+                                        thread::sleep(Duration::from_millis((sleep_seconds * 1000) as u64));
+                                    }
+                                },
+                            };
                         }
                     },
                     Err(err) => {
