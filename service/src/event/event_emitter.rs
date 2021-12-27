@@ -1,21 +1,21 @@
-pub struct  Listener<T> {
+pub struct Listener<'l, T> {
     name: String,
-    listener: fn(&T),
+    listener: Box<dyn Fn(&T) + 'l>,
 }
 
-pub struct EventEmitter<T> {
-    pub listeners: Vec<Listener<T>>,
+pub struct EventEmitter<'l, T> {
+    pub listeners: Vec<Listener<'l, T>>,
 }
 
-impl<T> EventEmitter<T> {
-    pub fn new() -> EventEmitter<T> {
+impl<'l, T> EventEmitter<'l, T> {
+    pub fn new() -> EventEmitter<'l, T> {
         EventEmitter { listeners: vec![] }
     }
 
-    pub fn on(&mut self, name: &str, listener: fn(&T)) {
+    pub fn on<F>(&mut self, name: &str, listener: F) where F: Fn(&T) + 'l {
         self.listeners.push(Listener {
             name: name.to_owned(),
-            listener,
+            listener: Box::new(listener),
         });
     }
 

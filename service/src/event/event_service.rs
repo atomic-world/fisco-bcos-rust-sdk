@@ -25,13 +25,13 @@ pub enum EventServiceError {
     }
 }
 
-pub struct EventService {
+pub struct EventService<'l> {
     config: Config,
-    block_notify_event_emitter: EventEmitter<ListenerResult>,
+    block_notify_event_emitter: EventEmitter<'l, ListenerResult>,
     block_notify_loop_lock: Arc<RwLock<Vec<u32>>>,
 }
 
-impl EventService {
+impl<'l> EventService<'l> {
     fn set_block_notify_loop_status(&self, group_id: u32, status: bool) {
         let rw_lock = self.block_notify_loop_lock.clone();
         let mut write_lock = rw_lock.write().unwrap();
@@ -56,7 +56,7 @@ impl EventService {
         read_lock.contains(&group_id)
     }
 
-    pub fn new(config: &Config) -> EventService {
+    pub fn new(config: &Config) -> EventService<'l> {
         EventService { 
             config: config.clone(),
             block_notify_event_emitter: EventEmitter::new(),
@@ -64,7 +64,7 @@ impl EventService {
         }
     }
 
-    pub fn register_block_notify_listener(&mut self, group_id: u32, listener: fn(&ListenerResult)) {
+    pub fn register_block_notify_listener<F>(&mut self, group_id: u32, listener: F) where F: Fn(&ListenerResult) + 'l {
         self.block_notify_event_emitter.on(&group_id.to_string(), listener);
     }
 
