@@ -15,11 +15,11 @@ use crate::precompiled::{
     table_crud_service::{ TableCRUDService, Condition, ConditionOperator },
 };
 
-pub struct SQLService<'a> {
-    web3_service: &'a Web3Service,
+pub struct SQLService<'l> {
+    web3_service: &'l Web3Service,
 }
 
-impl SQLService<'_> {
+impl<'l> SQLService<'l> {
     fn get_value_from_expr(&self, expr: &Expr) -> Option<String> {
         match expr {
             Expr::Identifier(ident) => Some(ident.value.clone()),
@@ -360,7 +360,7 @@ impl SQLService<'_> {
         Ok(table_crud_service.update(&table_name, &key_field_value, &entry, &condition).await?)
     }
 
-    pub fn new(web3_service: &Web3Service) -> SQLService {
+    pub fn new(web3_service: &'l Web3Service) -> SQLService<'l> {
         SQLService {
             web3_service
         }

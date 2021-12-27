@@ -12,12 +12,12 @@ use crate::precompiled::precompiled_service::{
 const ADDRESS: &str = "0x0000000000000000000000000000000000001004";
 const ABI_CONTENT: &str = r#"[{"constant":true,"inputs":[{"name":"name","type":"string"}],"name":"selectByName","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"name","type":"string"},{"name":"version","type":"string"}],"name":"selectByNameAndVersion","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"name","type":"string"},{"name":"version","type":"string"},{"name":"addr","type":"string"},{"name":"abi","type":"string"}],"name":"insert","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"name","type":"string"},{"name":"version","type":"string"}],"name":"getContractAddress","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"}]"#;
 
-pub struct CNSService<'a> {
-    web3_service: &'a Web3Service,
+pub struct CNSService<'l> {
+    web3_service: &'l Web3Service,
 }
 
-impl CNSService<'_> {
-    pub fn new(web3_service: &Web3Service) -> CNSService {
+impl<'l> CNSService<'l> {
+    pub fn new(web3_service: &'l Web3Service) -> CNSService<'l> {
         CNSService {
             web3_service
         }

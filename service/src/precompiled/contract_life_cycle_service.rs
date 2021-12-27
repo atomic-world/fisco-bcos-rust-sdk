@@ -4,12 +4,12 @@ use crate::precompiled::precompiled_service::{PrecompiledServiceError, call, sen
 const ADDRESS: &str = "0x0000000000000000000000000000000000001007";
 const ABI_CONTENT: &str = r#"[{"constant":true,"inputs":[{"name":"addr","type":"address"}],"name":"getStatus","outputs":[{"name":"","type":"int256"},{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"addr","type":"address"}],"name":"unfreeze","outputs":[{"name":"","type":"int256"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"addr","type":"address"}],"name":"freeze","outputs":[{"name":"","type":"int256"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"contractAddr","type":"address"},{"name":"userAddr","type":"address"}],"name":"grantManager","outputs":[{"name":"","type":"int256"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"addr","type":"address"}],"name":"listManager","outputs":[{"name":"","type":"int256"},{"name":"","type":"address[]"}],"payable":false,"stateMutability":"view","type":"function"}]"#;
 
-pub struct ContractLifeCycleService<'a> {
-    web3_service: &'a Web3Service,
+pub struct ContractLifeCycleService<'l> {
+    web3_service: &'l Web3Service,
 }
 
-impl ContractLifeCycleService<'_> {
-    pub fn new(web3_service: &Web3Service) -> ContractLifeCycleService {
+impl<'l> ContractLifeCycleService<'l> {
+    pub fn new(web3_service: &'l Web3Service) -> ContractLifeCycleService<'l> {
         ContractLifeCycleService {
             web3_service
         }

@@ -11,12 +11,12 @@ use crate::precompiled::precompiled_service::{
 const ADDRESS: &str = "0x0000000000000000000000000000000000001005";
 const ABI_CONTENT: &str = r#"[{"constant":false,"inputs":[{"name":"table_name","type":"string"},{"name":"addr","type":"string"}],"name":"insert","outputs":[{"name":"","type":"int256"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"table_name","type":"string"}],"name":"queryByName","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"table_name","type":"string"},{"name":"addr","type":"string"}],"name":"remove","outputs":[{"name":"","type":"int256"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"contractAddr","type":"address"}],"name":"queryPermission","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"contractAddr","type":"address"},{"name":"user","type":"address"}],"name":"grantWrite","outputs":[{"name":"","type":"int256"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"contractAddr","type":"address"},{"name":"user","type":"address"}],"name":"revokeWrite","outputs":[{"name":"","type":"int256"}],"payable":false,"stateMutability":"nonpayable","type":"function"}]"#;
 
-pub struct PermissionService<'a> {
-    web3_service: &'a Web3Service,
+pub struct PermissionService<'l> {
+    web3_service: &'l Web3Service,
 }
 
-impl PermissionService<'_> {
-    pub fn new(web3_service: &Web3Service) -> PermissionService {
+impl<'l> PermissionService<'l> {
+    pub fn new(web3_service: &'l Web3Service) -> PermissionService<'l> {
         PermissionService {
             web3_service
         }

@@ -4,12 +4,12 @@ use crate::precompiled::precompiled_service::{PrecompiledServiceError, send_tran
 const ADDRESS: &str = "0x0000000000000000000000000000000000001003";
 const ABI_CONTENT: &str = r#"[{"constant":false,"inputs":[{"name":"nodeID","type":"string"}],"name":"addObserver","outputs":[{"name":"","type":"int256"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"nodeID","type":"string"}],"name":"remove","outputs":[{"name":"","type":"int256"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"nodeID","type":"string"}],"name":"addSealer","outputs":[{"name":"","type":"int256"}],"payable":false,"stateMutability":"nonpayable","type":"function"}]"#;
 
-pub struct ConsensusService<'a> {
-    web3_service: &'a Web3Service,
+pub struct ConsensusService<'l> {
+    web3_service: &'l Web3Service,
 }
 
-impl ConsensusService<'_> {
-    pub fn new(web3_service: &Web3Service) -> ConsensusService {
+impl<'l> ConsensusService<'l> {
+    pub fn new(web3_service: &'l Web3Service) -> ConsensusService<'l> {
         ConsensusService {
             web3_service
         }

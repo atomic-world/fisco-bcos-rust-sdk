@@ -4,12 +4,12 @@ use crate::precompiled::precompiled_service::{PrecompiledServiceError, send_tran
 const ADDRESS: &str = "0x0000000000000000000000000000000000001000";
 const ABI_CONTENT: &str = r#"[{"constant":false,"inputs":[{"name":"key","type":"string"},{"name":"value","type":"string"}],"name":"setValueByKey","outputs":[{"name":"","type":"int256"}],"payable":false,"stateMutability":"nonpayable","type":"function"}]"#;
 
-pub struct SystemConfigService<'a> {
-    web3_service: &'a Web3Service,
+pub struct SystemConfigService<'l> {
+    web3_service: &'l Web3Service,
 }
 
-impl SystemConfigService<'_> {
-    pub fn new(web3_service: &Web3Service) -> SystemConfigService {
+impl<'l> SystemConfigService<'l> {
+    pub fn new(web3_service: &'l Web3Service) -> SystemConfigService<'l> {
         SystemConfigService {
             web3_service
         }

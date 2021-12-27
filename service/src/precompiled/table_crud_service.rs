@@ -91,12 +91,12 @@ impl Condition {
     }
 }
 
-pub struct TableCRUDService<'a> {
-    web3_service: &'a Web3Service,
+pub struct TableCRUDService<'l> {
+    web3_service: &'l Web3Service,
 }
 
-impl TableCRUDService<'_> {
-    pub fn new(web3_service: &Web3Service) -> TableCRUDService {
+impl<'l> TableCRUDService<'l> {
+    pub fn new(web3_service: &'l Web3Service) -> TableCRUDService<'l> {
         TableCRUDService {
             web3_service
         }
