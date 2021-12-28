@@ -1,6 +1,6 @@
 # fisco-bcos-rust-sdk
 
-![logo](https://gitee.com/FISCO-BCOS/FISCO-BCOS/raw/master/docs/images/FISCO_BCOS_Logo.svg)
+![logo](https://raw.githubusercontent.com/FISCO-BCOS/FISCO-BCOS/master/docs/FISCO_BCOS_Logo.svg)
 
 [![GitHub license](https://img.shields.io/badge/%20license-Apache%202.0-green)](https://github.com/CatLibrary/fisco-bcos-rust-sdk/blob/main/LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/CatLibrary/fisco-bcos-rust-sdk.svg)](https://github.com/CatLibrary/fisco-bcos-rust-sdk/issues)
