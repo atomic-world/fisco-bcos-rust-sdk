@@ -10,18 +10,17 @@ use std::{cmp,mem, process, ptr, thread};
 use std::time::{Duration, Instant};
 use std::sync::{Mutex, MutexGuard, Once};
 
-fn parse_ffi_invoke_result(r: c_int, message: &str) -> Result<c_int, TASSLError> {
-    if r <= 0 {
-        Err(TASSLError::CustomError { message: format!("{:?}. Error Code is:{:?}", message, r) })
-    } else {
-        Ok(r)
-    }
-}
-
 #[derive(Error, Debug)]
 pub enum TASSLError {
     #[error("std::ffi::NulError")]
     FFINulError(#[from] std::ffi::NulError),
+
+    #[error("tassl auth error")]
+    ServiceError {
+        error_code: Option<i32>,
+        return_code: i32,
+        message: String,
+    },
 
     #[error("tassl custom error")]
     CustomError {
@@ -36,6 +35,24 @@ pub struct TASSL {
 }
 
 impl TASSL {
+    fn parse_ffi_invoke_result(&self, return_code: c_int, message: &str) -> Result<c_int, TASSLError> {
+        if return_code <= 0 {
+            let error_code = match self.ssl {
+                None => None,
+                Some(ssl) => unsafe {
+                    Some(SSL_get_error(ssl, return_code))
+                }
+            };
+            Err(TASSLError::ServiceError {
+                error_code,
+                return_code,
+                message: message.to_owned(),
+            })
+        } else {
+            Ok(return_code)
+        }
+    }
+
     pub fn new(timeout_seconds: i64) -> TASSL {
         TASSL { ctx: None, ssl: None, timeout_seconds }
     }
@@ -123,7 +140,7 @@ impl TASSL {
                     self.ctx.unwrap()
                 }
             };
-            parse_ffi_invoke_result(
+            self.parse_ffi_invoke_result(
                 SSL_CTX_load_verify_locations(
                     ctx,
                     CString::new(ca_cert_file)?.as_ptr() as *const _,
@@ -134,7 +151,7 @@ impl TASSL {
                     ca_cert_file
                 )
             )?;
-            parse_ffi_invoke_result(
+            self.parse_ffi_invoke_result(
                 SSL_CTX_use_certificate_chain_file(
                     ctx,
                     CString::new(sign_cert_file)?.as_ptr() as *const _,
@@ -144,7 +161,7 @@ impl TASSL {
                     sign_cert_file
                 )
             )?;
-            parse_ffi_invoke_result(
+            self.parse_ffi_invoke_result(
                 SSL_CTX_use_PrivateKey_file(
                     ctx,
                     CString::new(sign_key_file)?.as_ptr() as *const _,
@@ -157,7 +174,7 @@ impl TASSL {
             )?;
             let mut check_enc_private_key = false;
             if enc_cert_file.len() > 0 && enc_key_file.len() > 0 {
-                parse_ffi_invoke_result(
+                self.parse_ffi_invoke_result(
                     SSL_CTX_use_certificate_file(
                         ctx,
                         CString::new(enc_cert_file)?.as_ptr() as *const _,
@@ -168,7 +185,7 @@ impl TASSL {
                         enc_cert_file
                     )
                 )?;
-                parse_ffi_invoke_result(
+                self.parse_ffi_invoke_result(
                     SSL_CTX_use_enc_PrivateKey_file(
                         ctx,
                         CString::new(enc_key_file)?.as_ptr() as *const _,
@@ -181,12 +198,12 @@ impl TASSL {
                 )?;
                 check_enc_private_key = true;
             }
-            parse_ffi_invoke_result(
+            self.parse_ffi_invoke_result(
                 SSL_CTX_check_private_key(ctx),
                 "SSL_CTX_check_private_key invoked failed"
             )?;
             if check_enc_private_key {
-                parse_ffi_invoke_result(
+                self.parse_ffi_invoke_result(
                     SSL_CTX_check_enc_private_key(ctx),
                     "SSL_CTX_check_enc_private_key invoked failed"
                 )?;
@@ -226,7 +243,7 @@ impl TASSL {
         }
         let len = cmp::min(c_int::MAX as usize, buf.len()) as c_int;
         unsafe {
-            let write_result = parse_ffi_invoke_result(
+            let write_result = self.parse_ffi_invoke_result(
                 SSL_write(self.ssl.unwrap(), buf.as_ptr() as *const c_void, len),
                 "SSL_write invoked failed"
             );
@@ -246,7 +263,7 @@ impl TASSL {
         }
         let len = cmp::min(c_int::MAX as usize, buf.len()) as c_int;
         unsafe {
-            let read_result = parse_ffi_invoke_result(
+            let read_result = self.parse_ffi_invoke_result(
                 SSL_read(self.ssl.unwrap(), buf.as_ptr() as *mut c_void, len),
                 "SSL_read invoked failed"
             );

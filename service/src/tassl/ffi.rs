@@ -718,6 +718,7 @@ extern "C" {
     pub(crate) fn SSL_write(ssl: *mut SSL, buf: *const c_void, num: c_int) -> c_int;
     pub(crate) fn SSL_read(ssl: *mut SSL, buf: *mut c_void, num: c_int) -> c_int;
     pub(crate) fn SSL_clear(ssl: *mut SSL) -> c_int;
+    pub(crate) fn SSL_get_error(ssl: *const SSL, ret: c_int) -> c_int;
 }
 
 pub(crate) unsafe fn SSL_CTX_set_mode(ctx: *mut SSL_CTX, op: c_long) -> c_long {
