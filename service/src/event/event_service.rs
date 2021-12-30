@@ -94,7 +94,7 @@ impl<'l> EventService<'l> {
                                             ChannelError::TASSLError(TASSLError::ServiceError { error_code, .. }) => {
                                                 // 1. 根据调试，关闭服务节点时，得到的错误状态码为 5（SSL_ERROR_SYSCALL）,
                                                 // 所以在状态码为 6（SSL_ERROR_ZERO_RETURN）或 5（SSL_ERROR_SYSCALL）时，尝试重新发起连接操作。
-                                                // 2. SSL 重连后，需要重新发送监听请求，未避免请求失败【状态码为 1（SSL_ERROR_SSL）】，
+                                                // 2. SSL 重连后，需要重新发送监听请求，为避免请求失败【状态码为 1（SSL_ERROR_SSL）】，
                                                 // 故需要检测该值，以便在下次循环中尝试重新发送监听请求。
                                                 match error_code {
                                                     Some(code) => (*code == 5 || *code == 6, *code == 1),
