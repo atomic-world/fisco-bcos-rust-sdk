@@ -1,4 +1,5 @@
 use std::thread;
+use std::collections::HashSet;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use thiserror::Error;
@@ -28,26 +29,19 @@ pub enum EventServiceError {
 pub struct EventService<'l> {
     config: Config,
     block_notify_event_emitter: EventEmitter<'l, ListenerResult>,
-    block_notify_loop_lock: Arc<RwLock<Vec<u32>>>,
+    block_notify_loop_lock: Arc<RwLock<HashSet<u32>>>,
 }
 
 impl<'l> EventService<'l> {
     fn set_block_notify_loop_status(&self, group_id: u32, status: bool) {
         let rw_lock = self.block_notify_loop_lock.clone();
         let mut write_lock = rw_lock.write().unwrap();
-        match write_lock.iter().position(|v| *v == group_id) {
-            Some(index) => {
-                write_lock.remove(index);
-                if status {
-                    write_lock.push(group_id);
-                }
-            },
-            None => {
-                if status {
-                    write_lock.push(group_id);
-                }
-            },
-        };
+        if write_lock.contains(&group_id) {
+            write_lock.remove(&group_id);
+        }
+        if status {
+            write_lock.insert(group_id);
+        }
     }
 
     fn get_block_notify_loop_status(&self, group_id: u32) -> bool {
@@ -60,7 +54,7 @@ impl<'l> EventService<'l> {
         EventService { 
             config: config.clone(),
             block_notify_event_emitter: EventEmitter::new(),
-            block_notify_loop_lock: Arc::new(RwLock::new(vec![])),
+            block_notify_loop_lock: Arc::new(RwLock::new(HashSet::new())),
         }
     }
 
