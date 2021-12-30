@@ -10,7 +10,7 @@ use crate::tassl::TASSLError;
 use crate::event::event_emitter::EventEmitter;
 use crate::channel::{MessageType, ChannelError, channel_read, pack_channel_message, open_tassl, parse_block_notify_data};
 
-type ListenerResult = Result<JSONValue, EventServiceError>;
+type EventEmitterResult = Result<JSONValue, EventServiceError>;
 
 #[derive(Error, Debug)]
 pub enum EventServiceError {
@@ -28,67 +28,51 @@ pub enum EventServiceError {
 
 pub struct EventService<'l> {
     config: Config,
-    block_notify_event_emitter: EventEmitter<'l, ListenerResult>,
-    block_notify_loop_lock: Arc<RwLock<HashSet<u32>>>,
+    event_emitter: EventEmitter<'l, EventEmitterResult>,
+    event_loop_lock: Arc<RwLock<HashSet<String>>>,
 }
 
 impl<'l> EventService<'l> {
-    fn set_block_notify_loop_status(&self, group_id: u32, status: bool) {
-        let rw_lock = self.block_notify_loop_lock.clone();
+    fn get_block_notify_key(&self, group_id: u32) -> String {
+        format!("_block_notify_{:?}", group_id)
+    }
+
+    fn get_event_loop_running_status(&self, key: &str) -> bool {
+        let rw_lock = self.event_loop_lock.clone();
+        let read_lock = rw_lock.read().unwrap();
+        read_lock.contains(key)
+    }
+
+    fn set_event_loop_running_status(&self, key: &str, status: bool) {
+        let rw_lock = self.event_loop_lock.clone();
         let mut write_lock = rw_lock.write().unwrap();
-        if write_lock.contains(&group_id) {
-            write_lock.remove(&group_id);
+        if write_lock.contains(key) {
+            write_lock.remove(key);
         }
         if status {
-            write_lock.insert(group_id);
+            write_lock.insert(key.to_owned());
         }
     }
 
-    fn get_block_notify_loop_status(&self, group_id: u32) -> bool {
-        let rw_lock = self.block_notify_loop_lock.clone();
-        let read_lock = rw_lock.read().unwrap();
-        read_lock.contains(&group_id)
+    fn stop_event_loop(&self, key: &str) {
+        self.set_event_loop_running_status(key, false);
     }
 
-    pub fn new(config: &Config) -> EventService<'l> {
-        EventService { 
-            config: config.clone(),
-            block_notify_event_emitter: EventEmitter::new(),
-            block_notify_loop_lock: Arc::new(RwLock::new(HashSet::new())),
-        }
-    }
-
-    pub fn register_block_notify_listener<F>(&mut self, group_id: u32, listener: F) where F: Fn(&ListenerResult) + 'l {
-        self.block_notify_event_emitter.on(&group_id.to_string(), listener);
-    }
-
-    pub fn remove_block_notify_listener(&mut self, group_id: u32) {
-        self.block_notify_event_emitter.remove(&group_id.to_string());
-    }
-
-    pub async fn run_block_notify_loop(
-        &self,
-        group_id: u32,
-        sleep_seconds: u32,
-        max_retry_times: i32,
-    ) {
+    async fn run_event_loop<F>(&self, key: &str, request_data: &[u8], sleep_seconds: u32, max_retry_times: i32, fn_result_parse: F)
+        where F: FnOnce(Vec<u8>) -> JSONValue + Copy
+    {
         match open_tassl(&self.config) {
             Ok(tassl) => {
-                let params = json!([format!("_block_notify_{:?}", group_id)]);
-                let request_data = pack_channel_message(
-                    &serde_json::to_vec(&params).unwrap(),
-                    MessageType::AMOPClientTopics,
-                );
                 match tassl.write(&request_data) {
                     Ok(_) => {
                         let mut remain_retry_times = max_retry_times;
-                        self.set_block_notify_loop_status(group_id, true);
-                        while self.get_block_notify_loop_status(group_id) {
-                            match channel_read(&tassl).map(parse_block_notify_data) {
+                        self.set_event_loop_running_status(key, true);
+                        while self.get_event_loop_running_status(key) {
+                            match channel_read(&tassl).map(fn_result_parse) {
                                 Ok(value) => {
                                     remain_retry_times = max_retry_times;
-                                    self.block_notify_event_emitter.emit(
-                                        &group_id.to_string(),
+                                    self.event_emitter.emit(
+                                        key,
                                         &Ok(value),
                                     );
                                 },
@@ -100,15 +84,14 @@ impl<'l> EventService<'l> {
                                                 max_retry_times
                                             ),
                                         };
-                                        self.block_notify_event_emitter.emit(
-                                            &group_id.to_string(),
+                                        self.event_emitter.emit(
+                                            key,
                                             &Err(err),
                                         );
-                                        self.stop_block_notify_loop(group_id);
-                                        break;
+                                        self.stop_event_loop(key);
                                     } else {
-                                        self.block_notify_event_emitter.emit(
-                                            &group_id.to_string(),
+                                        self.event_emitter.emit(
+                                            key,
                                             &Err(EventServiceError::ChannelError(err)),
                                         );
                                         remain_retry_times -= 1;
@@ -119,23 +102,52 @@ impl<'l> EventService<'l> {
                         }
                     },
                     Err(err) => {
-                        self.block_notify_event_emitter.emit(
-                            &group_id.to_string(),
+                        self.event_emitter.emit(
+                            key,
                             &Err(EventServiceError::TASSLError(err)),
                         );
                     }
                 };
             },
             Err(err) =>  {
-                self.block_notify_event_emitter.emit(
-                    &group_id.to_string(),
+                self.event_emitter.emit(
+                    key,
                     &Err(EventServiceError::TASSLError(err)),
                 );
             }
         };
     }
 
+    pub fn new(config: &Config) -> EventService<'l> {
+        EventService { 
+            config: config.clone(),
+            event_emitter: EventEmitter::new(),
+            event_loop_lock: Arc::new(RwLock::new(HashSet::new())),
+        }
+    }
+
+    pub fn register_block_notify_listener<F>(&mut self, group_id: u32, listener: F) where F: Fn(&EventEmitterResult) + 'l {
+        let key = self.get_block_notify_key(group_id);
+        self.event_emitter.on(&key, listener);
+    }
+
+    pub fn remove_block_notify_listener(&mut self, group_id: u32) {
+        let key = self.get_block_notify_key(group_id);
+        self.event_emitter.remove(&key);
+    }
+
+    pub async fn run_block_notify_loop(&self, group_id: u32, sleep_seconds: u32, max_retry_times: i32) {
+        let key = self.get_block_notify_key(group_id);
+        let params = json!([format!("_block_notify_{:?}", group_id)]);
+        let request_data = pack_channel_message(
+            &serde_json::to_vec(&params).unwrap(),
+            MessageType::AMOPClientTopics,
+        );
+        self.run_event_loop(&key, &request_data, sleep_seconds, max_retry_times, parse_block_notify_data).await
+    }
+
     pub fn stop_block_notify_loop(&self, group_id: u32) {
-        self.set_block_notify_loop_status(group_id, false);
+        let key = self.get_block_notify_key(group_id);
+        self.stop_event_loop(&key);
     }
 }
