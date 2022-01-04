@@ -47,7 +47,10 @@ fisco-bcos-service = "0.3"
   * [十、ChainGovernanceService](#十ChainGovernanceService)
      * [10.1 实例化](#101-实例化)
      * [10.2 接口](#102-接口)
-  * [十一、注意事项](#十三注意事项)
+  * [十一、EventService](#十一EventService)
+     * [11.1 实例化](#111-实例化)
+     * [11.2 接口](#112-接口)
+  * [十二、注意事项](#十二注意事项)
 ## 一、配置
 
 配置文件为包含以下信息的  `json` 文件：
@@ -469,9 +472,56 @@ let chain_governance_service = ChainGovernanceService::new(&web3_service);
 
 * 接口 `list_committee_members`、`query_votes_of_member`、`query_votes_of_threshold`、`list_operators` 会将返回值由 `string` 转换成 `serde_json::Value` 格式。
 
-## 十一、注意事项
 
-* 所有接口均为异步调用（使用了 Rust 的 [async](https://rust-lang.github.io/async-book/) 特性）。
+## 十一、EventService
+
+通过 [EventService](https://github.com/atomic-world/fisco-bcos-rust-sdk/blob/main/service/src/event/event_service.rs)，可对合约时间进行监听。
+
+### 11.1 实例化
+
+```rust
+use fisco_bcos_service::create_event_service;
+
+let config_file_path = "./configs/config.json";
+let event_service = create_event_service(config_file_path).unwrap();
+```
+
+### 11.2 接口
+
+* 接口列表：
+
+    * `register_block_notify_listener`
+    * `remove_block_notify_listener`
+    * `run_block_notify_loop`
+    * `stop_block_notify_loop`
+
+
+* 接口 `run_block_notify_loop` 最后两个参数的意义如下：
+
+    * `sleep_seconds`：链上数据读取失败后，进入下一轮监听前要等待的时间（单位为秒）。
+    * `max_retry_times`：链上数据读取失败后，最大重试次数，如果失败次数大于指定的值，将主动终止 loop。当值为 -1 时，表示无限循环。
+
+* 接口 `run_block_notify_loop` 会一直运行下去，想要终止需调用 `stop_block_notify_loop` 接口，因此一般需要开启新的线程来运行 `run_block_notify_loop`，比如下面的例子：
+
+  ```rs
+  let mut event_service = create_event_service("./configs/config.json").unwrap();
+  event_service.register_block_notify_listener(1, |v| println!("{:?}", v));
+
+  let event_service_arc = Arc::new(event_service);
+  let block_notify_loop_service = event_service_arc.clone();
+  let block_notify_loop_handle = thread::spawn(move || {
+    block_notify_loop_service.run_block_notify_loop(1, 1, -1);
+  });
+  thread::sleep(Duration::from_millis((10 * 1000) as u64));
+  event_service_arc.clone().stop_block_notify_loop(1);
+  block_notify_loop_handle.join().unwrap();
+  ```
+
+* 调用 `stop_block_notify_loop` 后，`run_block_notify_loop` 并不会立即终止，而是等到当前一轮监听返回后才终止。
+
+## 十二、注意事项
+
+* 所有接口除特殊说明外均为异步调用（使用了 Rust 的 [async](https://rust-lang.github.io/async-book/) 特性）。
 
 # License
 
