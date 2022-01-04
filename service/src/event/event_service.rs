@@ -94,6 +94,7 @@ impl<'l> EventService<'l> {
                                             key,
                                             &Err(EventServiceError::ChannelError(err)),
                                         );
+                                        break;
                                     } else if max_retry_times != -1 && remain_retry_times == 0 {
                                         let err = EventServiceError::CustomError {
                                             message: format!(
@@ -106,6 +107,7 @@ impl<'l> EventService<'l> {
                                             &Err(err),
                                         );
                                         self.stop_event_loop(key);
+                                        break;
                                     } else {
                                         let (need_reconnect, mut need_re_request) = match &err {
                                             ChannelError::TASSLError(TASSLError::ServiceError { error_code, .. }) => {
