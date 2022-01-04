@@ -89,7 +89,12 @@ impl<'l> EventService<'l> {
                                     );
                                 },
                                 Err(err) => {
-                                    if max_retry_times != -1 && remain_retry_times == 0 {
+                                    if !self.get_event_loop_running_status(key) {
+                                        self.event_emitter.emit(
+                                            key,
+                                            &Err(EventServiceError::ChannelError(err)),
+                                        );
+                                    } else if max_retry_times != -1 && remain_retry_times == 0 {
                                         let err = EventServiceError::CustomError {
                                             message: format!(
                                                 "SSL_read invoked had failed over {:?} times, stopping the loop now",
@@ -189,6 +194,11 @@ impl<'l> EventService<'l> {
         self.event_emitter.remove(&key);
     }
 
+    ///
+    /// sleep_seconds：链上数据读取失败后，进入下一轮监听前要等待的时间（单位为秒）。
+    ///
+    /// max_retry_times：链上数据读取失败后，最大重试次数，如果失败次数大于指定的值，将主动终止 loop。当值为 -1 时，表示无限循环。
+    ///
     pub fn run_block_notify_loop(&self, group_id: u32, sleep_seconds: u32, max_retry_times: i32) {
         let key = self.get_block_notify_key(group_id);
         let params = json!([format!("_block_notify_{:?}", group_id)]);
