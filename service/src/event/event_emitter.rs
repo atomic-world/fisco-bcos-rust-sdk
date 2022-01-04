@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 pub struct Listener<'l, T> {
     name: String,
-    listener: Box<dyn Fn(&T) + 'l>,
+    listener: Arc<dyn Fn(&T) + Send + Sync + 'l>,
 }
 
 pub struct EventEmitter<'l, T> {
@@ -12,10 +14,10 @@ impl<'l, T> EventEmitter<'l, T> {
         EventEmitter { listeners: vec![] }
     }
 
-    pub fn on<F>(&mut self, name: &str, listener: F) where F: Fn(&T) + 'l {
+    pub fn on<F>(&mut self, name: &str, listener: F) where F: Fn(&T) + Send + Sync + 'l {
         self.listeners.push(Listener {
             name: name.to_owned(),
-            listener: Box::new(listener),
+            listener: Arc::new(listener),
         });
     }
 

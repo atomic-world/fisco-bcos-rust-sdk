@@ -661,7 +661,7 @@ impl Cli {
                         Ok(data) =>  println!("\n{:?}\n", data),
                     };
                 });
-                event_service.run_block_notify_loop(group_id, sleep_seconds, max_retry_times).await;
+                event_service.run_block_notify_loop(group_id, sleep_seconds, max_retry_times);
             },
             command => println!("\nError: Unavailable command {:?}\n", command),
         };
