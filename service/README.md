@@ -504,7 +504,7 @@ let event_service = create_event_service(config_file_path).unwrap();
 * 接口 `run_block_notify_loop` 会一直运行下去，想要终止需调用 `stop_block_notify_loop` 接口，因此一般需要开启新的线程来运行 `run_block_notify_loop`，比如下面的例子：
 
   ```rs
-  let mut event_service = create_event_service("./configs/config.json").unwrap();
+  let event_service = create_event_service("./configs/config.json").unwrap();
   event_service.register_block_notify_listener(1, |v| println!("{:?}", v));
 
   let event_service_arc = Arc::new(event_service);

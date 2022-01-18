@@ -637,7 +637,7 @@ impl Cli {
 
     async fn call_event_service(&mut self, method: &str, args: &Vec<String>) {
         let config = self.config.as_ref().unwrap();
-        let mut event_service = EventService::new(config);
+        let event_service = EventService::new(config);
         match method {
             "event:block_notify" => {
                 let group_id = if args.len() == 0 {

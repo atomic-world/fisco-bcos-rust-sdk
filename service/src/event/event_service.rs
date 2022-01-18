@@ -183,7 +183,7 @@ impl<'l> EventService<'l> {
     }
 
     pub fn register_block_notify_listener<F>(
-        &mut self,
+        &self,
         group_id: u32,
         listener: F
     ) where F: Fn(&EventEmitterResult) + Send + Sync + 'l {
@@ -191,7 +191,7 @@ impl<'l> EventService<'l> {
         self.event_emitter.on(&key, listener);
     }
 
-    pub fn remove_block_notify_listener(&mut self, group_id: u32) {
+    pub fn remove_block_notify_listener(&self, group_id: u32) {
         let key = self.get_block_notify_key(group_id);
         self.event_emitter.remove(&key);
     }

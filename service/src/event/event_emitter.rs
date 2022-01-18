@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::sync::Arc;
 
 pub struct Listener<'l, T> {
@@ -6,38 +7,34 @@ pub struct Listener<'l, T> {
 }
 
 pub struct EventEmitter<'l, T> {
-    pub listeners: Vec<Listener<'l, T>>,
+    pub listeners: RefCell<Vec<Listener<'l, T>>>,
 }
 
 impl<'l, T> EventEmitter<'l, T> {
     pub fn new() -> EventEmitter<'l, T> {
-        EventEmitter { listeners: vec![] }
+        EventEmitter { listeners: RefCell::from(vec![]) }
     }
 
-    pub fn on<F>(&mut self, name: &str, listener: F) where F: Fn(&T) + Send + Sync + 'l {
-        self.listeners.push(Listener {
+    pub fn on<F>(&self, name: &str, listener: F) where F: Fn(&T) + Send + Sync + 'l {
+        self.listeners.borrow_mut().push(Listener {
             name: name.to_owned(),
             listener: Arc::new(listener),
         });
     }
 
     pub fn emit(&self, name: &str, value: &T) {
-        for listener in &self.listeners {
+        for listener in self.listeners.borrow().iter() {
             if listener.name.eq(name) {
                 (listener.listener)(value);
             }
         }
     }
 
-    pub fn remove(&mut self, name: &str) {
-        let mut remove_listener_indexes: Vec<usize> = vec![];
-        for (index, listener) in self.listeners.iter().enumerate() {
+    pub fn remove(&self, name: &str) {
+        for (index, listener) in self.listeners.borrow().iter().enumerate() {
             if listener.name.eq(name) {
-                remove_listener_indexes.push(index);
+                self.listeners.borrow_mut().remove(index);
             }
-        }
-        for index in remove_listener_indexes.iter() {
-            self.listeners.remove(*index);
         }
     }
 }
