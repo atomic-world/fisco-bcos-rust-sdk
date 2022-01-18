@@ -510,7 +510,7 @@ let event_service = create_event_service(config_file_path).unwrap();
   let event_service_arc = Arc::new(event_service);
   let block_notify_loop_service = event_service_arc.clone();
   let block_notify_loop_handle = thread::spawn(move || {
-    block_notify_loop_service.run_block_notify_loop(1, 1, -1);
+      block_notify_loop_service.run_block_notify_loop(1, 1, -1);
   });
   thread::sleep(Duration::from_millis((10 * 1000) as u64));
   event_service_arc.clone().stop_block_notify_loop(1);
