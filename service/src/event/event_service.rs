@@ -208,7 +208,7 @@ impl<'l> EventService<'l> {
             &serde_json::to_vec(&params).unwrap(),
             MessageType::AMOPClientTopics,
         );
-        self.run_event_loop(&key, &request_data, sleep_seconds, max_retry_times, parse_block_notify_data)
+        self.run_event_loop(&key, &request_data, sleep_seconds, max_retry_times, parse_block_notify_data);
     }
 
     pub fn stop_block_notify_loop(&self, group_id: u32) {
