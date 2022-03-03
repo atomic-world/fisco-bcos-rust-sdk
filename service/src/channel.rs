@@ -46,7 +46,7 @@ pub fn pack_channel_message(data: &Vec<u8>, message_type: MessageType) -> Vec<u8
 }
 
 pub fn open_tassl(config: &Config) -> Result<TASSL, TASSLError> {
-    let mut tassl = TASSL::new(config.timeout_seconds);
+    let tassl = TASSL::new(config.timeout_seconds);
     tassl.init();
     tassl.load_auth_files(
         &config.authentication.ca_cert,

@@ -21,9 +21,6 @@ type EventEmitterResult = Result<JSONValue, EventServiceError>;
 
 #[derive(Error, Debug)]
 pub enum EventServiceError {
-    #[error("tassl error")]
-    TASSLError(#[from] TASSLError),
-
     #[error("channel error")]
     ChannelError(#[from] ChannelError),
 
@@ -74,7 +71,7 @@ impl<'l> EventService<'l> {
         fn_result_parse: F,
     ) where F: FnOnce(Vec<u8>) -> JSONValue + Copy {
         match open_tassl(&self.config) {
-            Ok(mut tassl) => {
+            Ok(tassl) => {
                 match tassl.write(&request_data) {
                     Ok(_) => {
                         let mut remain_retry_times = max_retry_times;
@@ -128,7 +125,7 @@ impl<'l> EventService<'l> {
                                                 if let Err(err) = tassl.connect(&self.config.node.host, self.config.node.port) {
                                                     self.event_emitter.emit(
                                                         key,
-                                                        &Err(EventServiceError::TASSLError(err)),
+                                                        &Err(EventServiceError::ChannelError(ChannelError::TASSLError(err))),
                                                     );
                                                 } else {
                                                     need_re_request = true;
@@ -138,7 +135,7 @@ impl<'l> EventService<'l> {
                                                 if let Err(err) = tassl.write(&request_data) {
                                                     self.event_emitter.emit(
                                                         key,
-                                                        &Err(EventServiceError::TASSLError(err)),
+                                                        &Err(EventServiceError::ChannelError(ChannelError::TASSLError(err))),
                                                     );
                                                 } else {
                                                     continue;
@@ -160,7 +157,7 @@ impl<'l> EventService<'l> {
                     Err(err) => {
                         self.event_emitter.emit(
                             key,
-                            &Err(EventServiceError::TASSLError(err)),
+                            &Err(EventServiceError::ChannelError(ChannelError::TASSLError(err))),
                         );
                     }
                 };
@@ -168,7 +165,7 @@ impl<'l> EventService<'l> {
             Err(err) =>  {
                 self.event_emitter.emit(
                     key,
-                    &Err(EventServiceError::TASSLError(err)),
+                    &Err(EventServiceError::ChannelError(ChannelError::TASSLError(err))),
                 );
             }
         };

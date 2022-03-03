@@ -7,6 +7,7 @@ use thiserror::Error;
 use std::ffi::CString;
 use std::io::{self, Write};
 use std::{cmp,mem, process, ptr, thread};
+use std::cell::RefCell;
 use std::time::{Duration, Instant};
 use std::sync::{Mutex, MutexGuard, Once};
 
@@ -29,15 +30,15 @@ pub enum TASSLError {
 }
 
 pub struct TASSL {
-    ctx: Option<*mut SSL_CTX>,
-    ssl: Option<*mut SSL>,
+    ctx: RefCell<Option<*mut SSL_CTX>>,
+    ssl: RefCell<Option<*mut SSL>>,
     timeout_seconds: i64,
 }
 
 impl TASSL {
     fn parse_ffi_invoke_result(&self, return_code: c_int, message: &str) -> Result<c_int, TASSLError> {
         if return_code <= 0 {
-            let error_code = match self.ssl {
+            let error_code = match *self.ssl.borrow() {
                 None => None,
                 Some(ssl) => unsafe {
                     Some(SSL_get_error(ssl, return_code))
@@ -54,7 +55,7 @@ impl TASSL {
     }
 
     pub fn new(timeout_seconds: i64) -> TASSL {
-        TASSL { ctx: None, ssl: None, timeout_seconds }
+        TASSL { ctx: RefCell::new(None), ssl: RefCell::new(None), timeout_seconds }
     }
 
     pub fn init(&self) {
@@ -117,7 +118,7 @@ impl TASSL {
     }
 
     pub fn load_auth_files(
-        &mut self,
+        &self,
         ca_cert_file: &str,
         sign_key_file: &str,
         sign_cert_file: &str,
@@ -125,21 +126,19 @@ impl TASSL {
         enc_cert_file: &str,
     ) -> Result<(), TASSLError> {
         unsafe {
-            let ctx = match self.ctx {
-                Some(v) => v,
-                None => {
-                    self.ctx = Some(SSL_CTX_new(TLSv1_2_client_method()));
-                    SSL_CTX_set_timeout(self.ctx.unwrap(), self.timeout_seconds);
-                    SSL_CTX_set_mode(self.ctx.unwrap(), SSL_MODE_AUTO_RETRY);
-                    SSL_CTX_set_verify(
-                        self.ctx.unwrap(),
-                        SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
-                        None
-                    );
-                    SSL_CTX_set_verify_depth(self.ctx.unwrap(), 10);
-                    self.ctx.unwrap()
-                }
-            };
+            if self.ctx.borrow().is_none() {
+                let ctx = SSL_CTX_new(TLSv1_2_client_method());
+                SSL_CTX_set_timeout(ctx, self.timeout_seconds);
+                SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY);
+                SSL_CTX_set_verify(
+                    ctx,
+                    SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+                    None
+                );
+                SSL_CTX_set_verify_depth(ctx, 10);
+                *self.ctx.borrow_mut() = Some(ctx);
+            }
+            let ctx = self.ctx.borrow().unwrap();
             self.parse_ffi_invoke_result(
                 SSL_CTX_load_verify_locations(
                     ctx,
@@ -212,15 +211,12 @@ impl TASSL {
         }
     }
 
-    pub fn connect(&mut self, host: &str, port: i32) -> Result<(), TASSLError> {
+    pub fn connect(&self, host: &str, port: i32) -> Result<(), TASSLError> {
         unsafe {
-            let ssl = match self.ssl {
-                Some(v) => v,
-                None => {
-                    self.ssl = Some(SSL_new(self.ctx.unwrap()));
-                    self.ssl.unwrap()
-                }
-            };
+            if self.ssl.borrow().is_none() {
+                *self.ssl.borrow_mut() = Some(SSL_new(self.ctx.borrow().unwrap()));
+            }
+            let ssl = self.ssl.borrow().unwrap();
             let connect = BIO_new_connect(CString::new(format!("{}:{}", host, port))?.as_ptr());
             SSL_set_bio(ssl, connect, connect);
             SSL_set_connect_state(ssl);
@@ -244,13 +240,13 @@ impl TASSL {
         let len = cmp::min(c_int::MAX as usize, buf.len()) as c_int;
         unsafe {
             let write_result = self.parse_ffi_invoke_result(
-                SSL_write(self.ssl.unwrap(), buf.as_ptr() as *const c_void, len),
+                SSL_write(self.ssl.borrow().unwrap(), buf.as_ptr() as *const c_void, len),
                 "SSL_write invoked failed"
             );
             match write_result {
                 Ok(v) => Ok(v as usize),
                 Err(error) => {
-                    SSL_clear(self.ssl.unwrap());
+                    SSL_clear(self.ssl.borrow().unwrap());
                     Err(error)
                 }
             }
@@ -264,7 +260,7 @@ impl TASSL {
         let len = cmp::min(c_int::MAX as usize, buf.len()) as c_int;
         unsafe {
             let read_result = self.parse_ffi_invoke_result(
-                SSL_read(self.ssl.unwrap(), buf.as_ptr() as *mut c_void, len),
+                SSL_read(self.ssl.borrow().unwrap(), buf.as_ptr() as *mut c_void, len),
                 "SSL_read invoked failed"
             );
             match read_result {
@@ -276,8 +272,9 @@ impl TASSL {
 
     pub fn close(&self) {
         unsafe {
-            if self.ssl.is_some() {
-                SSL_shutdown(self.ssl.unwrap());
+            let ssl = self.ssl.borrow();
+            if ssl.is_some() {
+                SSL_shutdown(ssl.unwrap());
             }
         }
     }
@@ -286,12 +283,15 @@ impl TASSL {
 impl Drop for TASSL {
     fn drop(&mut self) {
         unsafe {
-            if self.ssl.is_some() {
-                SSL_shutdown(self.ssl.unwrap());
-                SSL_free(self.ssl.unwrap());
+            let ssl = self.ssl.borrow();
+            if ssl.is_some() {
+                let ssl = ssl.unwrap();
+                SSL_shutdown(ssl);
+                SSL_free(ssl);
             }
-            if self.ctx.is_some() {
-                SSL_CTX_free(self.ctx.unwrap());
+            let ctx = self.ctx.borrow();
+            if ctx.is_some() {
+                SSL_CTX_free(ctx.unwrap());
             }
         }
     }
