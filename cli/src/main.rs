@@ -40,10 +40,7 @@ async fn main() {
                 rl.add_history_entry(command);
                 cli.run_command(command).await;
             },
-            Err(ReadlineError::Interrupted) => {
-                break
-            },
-            Err(ReadlineError::Eof) => {
+            Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => {
                 break
             },
             Err(err) => {
