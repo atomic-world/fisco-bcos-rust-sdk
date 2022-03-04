@@ -5,6 +5,25 @@ use rustyline::Editor;
 
 use crate::cli::Cli;
 
+
+fn print_help() {
+    println!("=============================================================================================");
+    println!("Welcome to FISCO BCOS console(0.3.0).");
+    println!("Type 'help' for help.");
+    println!("Type 'CTRL-C' or 'CTRL-D' to quit console.");
+    println!("Visit https://github.com/kkawakam/rustyline#actions to get more actions.\n");
+    println!( r#"________ ______  ______   ______   ______       _______   ______   ______   ______
+|        |      \/      \ /      \ /      \     |       \ /      \ /      \ /      \
+| $$$$$$$$\$$$$$|  $$$$$$|  $$$$$$|  $$$$$$\    | $$$$$$$|  $$$$$$|  $$$$$$|  $$$$$$\
+| $$__     | $$ | $$___\$| $$   \$| $$  | $$    | $$__/ $| $$   \$| $$  | $| $$___\$$
+| $$  \    | $$  \$$    \| $$     | $$  | $$    | $$    $| $$     | $$  | $$\$$    \
+| $$$$$    | $$  _\$$$$$$| $$   __| $$  | $$    | $$$$$$$| $$   __| $$  | $$_\$$$$$$\
+| $$      _| $$_|  \__| $| $$__/  | $$__/ $$    | $$__/ $| $$__/  | $$__/ $|  \__| $$
+| $$     |   $$ \\$$    $$\$$    $$\$$    $$    | $$    $$\$$    $$\$$    $$\$$    $$
+ \$$      \$$$$$$ \$$$$$$  \$$$$$$  \$$$$$$      \$$$$$$$  \$$$$$$  \$$$$$$  \$$$$$$"#);
+    println!("\n=============================================================================================\n");
+}
+
 #[tokio::main]
 async fn main() {
     let mut cli = Cli::new();
@@ -12,7 +31,7 @@ async fn main() {
     if let Some(path) = home::home_dir() {
         let _ = rl.load_history(path.join(".fisco_bcos_history").as_path());
     }
-    println!("Welcome to Command line tool for FISCO BCOS (V0.2.0). Type help to get help");
+    print_help();
     loop {
         let readline = rl.readline(">> ");
         match readline {

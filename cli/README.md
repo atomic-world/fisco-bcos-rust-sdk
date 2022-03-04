@@ -25,7 +25,24 @@ $ fisco-bcos-cli
 执行上述命令，你将进入以下交互页面：
 
 ```shell
-Welcome to Command line tool for FISCO BCOS (V0.3.0). Type help to get help
+=============================================================================================
+Welcome to FISCO BCOS console(0.3.0).
+Type 'help' for help.
+Type 'CTRL-C' or 'CTRL-D' to quit console.
+Visit https://github.com/kkawakam/rustyline#actions to get more actions.
+
+________ ______  ______   ______   ______       _______   ______   ______   ______
+|        |      \/      \ /      \ /      \     |       \ /      \ /      \ /      \
+| $$$$$$$$\$$$$$|  $$$$$$|  $$$$$$|  $$$$$$\    | $$$$$$$|  $$$$$$|  $$$$$$|  $$$$$$\
+| $$__     | $$ | $$___\$| $$   \$| $$  | $$    | $$__/ $| $$   \$| $$  | $| $$___\$$
+| $$  \    | $$  \$$    \| $$     | $$  | $$    | $$    $| $$     | $$  | $$\$$    \
+| $$$$$    | $$  _\$$$$$$| $$   __| $$  | $$    | $$$$$$$| $$   __| $$  | $$_\$$$$$$\
+| $$      _| $$_|  \__| $| $$__/  | $$__/ $$    | $$__/ $| $$__/  | $$__/ $|  \__| $$
+| $$     |   $$ \\$$    $$\$$    $$\$$    $$    | $$    $$\$$    $$\$$    $$\$$    $$
+ \$$      \$$$$$$ \$$$$$$  \$$$$$$  \$$$$$$      \$$$$$$$  \$$$$$$  \$$$$$$  \$$$$$$
+
+=============================================================================================
+
 >>
 ```
 
@@ -34,11 +51,85 @@ Welcome to Command line tool for FISCO BCOS (V0.3.0). Type help to get help
 ```shell
 >> help
 
-1. Use set_config function to initialize the environment(e.g., set_config ./config/config.json)
-2. Use the below functions to interact with the FISCO BCOS Service: ["get_client_version", "get_block_number", "get_pbft_view", "get_sealer_list", "get_observer_list", "get_consensus_status", "get_sync_status", "get_peers", "get_group_peers", "get_node_id_list", "get_group_list", "get_block_by_hash", "get_block_by_number", "get_block_header_by_hash", "get_block_header_by_number", "get_block_hash_by_number", "get_transaction_by_hash", "get_transaction_by_block_hash_and_index", "get_transaction_by_block_number_and_index", "get_transaction_receipt", "get_pending_transactions", "get_pending_tx_size", "get_code", "get_total_transaction_count", "call", "send_raw_transaction", "send_raw_transaction_and_get_proof", "deploy", "compile", "get_system_config_by_key", "get_transaction_by_hash_with_proof", "get_transaction_receipt_by_hash_with_proof", "generate_group", "start_group", "stop_group", "remove_group", "recover_group", "query_group_status", "get_node_info", "get_batch_receipts_by_block_number_and_range", "get_batch_receipts_by_block_hash_and_range", "system_config:set_value_key", "consensus:add_sealer", "consensus:add_observer", "consensus:remove", "cns:insert", "cns:select_by_name", "cns:select_by_name_and_version", "cns:get_contract_address", "permission:insert", "permission:remove", "permission:query_by_name", "permission:grant_write", "permission:revoke_write", "permission:query_permission", "contract_life_cycle:freeze", "contract_life_cycle:unfreeze", "contract_life_cycle:grant_manager", "contract_life_cycle:get_status", "contract_life_cycle:list_manager", "chain_governance_service:grant_committee_member", "chain_governance_service:revoke_committee_member", "chain_governance_service:list_committee_members", "chain_governance_service:query_committee_member_weight", "chain_governance_service:update_committee_member_weight", "chain_governance_service:query_votes_of_member", "chain_governance_service:query_votes_of_threshold", "chain_governance_service:update_threshold", "chain_governance_service:query_threshold", "chain_governance_service:grant_operator", "chain_governance_service:revoke_operator", "chain_governance_service:list_operators", "chain_governance_service:freeze_account", "chain_governance_service:unfreeze_account", "chain_governance_service:get_account_status", "sql", "event:block_notify"](e.g., get_block_by_number 0x0)
-3. Type help to get help
-4. Type CTRL-C or CTRL-D to quit
-5. Visit https://github.com/kkawakam/rustyline#actions to get more actions
+1. Use set_config to initialize environment(e.g., set_config ./config/config.json).
+2. Use the below APIs to interact with FISCO BCOS：
+
+* get_client_version                                         Query the current node version.
+* get_block_number                                           Query the number of most recent block.
+* get_pbft_view                                              Query the pbft view of node.
+* get_sealer_list                                            Query nodeId list for sealer nodes.
+* get_observer_list                                          Query nodeId list for observer nodes.
+* get_consensus_status                                       Query consensus status.
+* get_sync_status                                            Query sync status.
+* get_peers                                                  Query peers currently connected to the client.
+* get_group_peers                                            Query nodeId list for sealer and observer nodes.
+* get_node_id_list                                           Query nodeId list for all connected nodes.
+* get_group_list                                             Query group list.
+* get_block_by_hash                                          Query information about a block by hash.
+* get_block_by_number                                        Query information about a block by number.
+* get_block_header_by_hash                                   Query information about a block header by hash.
+* get_block_header_by_number                                 Query information about a block header by block number.
+* get_block_hash_by_number                                   Query block hash by block number.
+* get_transaction_by_hash                                    Query information about a transaction requested by transaction hash.
+* get_transaction_by_block_hash_and_index                    Query information about a transaction by block hash and transaction index position.
+* get_transaction_by_block_number_and_index                  Query information about a transaction by block number and transaction index position.
+* get_transaction_receipt                                    Query the receipt of a transaction by transaction hash.
+* get_pending_transactions                                   Query pending transactions.
+* get_pending_tx_size                                        Query pending transactions size.
+* get_code                                                   Query code at a given address.
+* get_total_transaction_count                                Query total transaction count.
+* get_system_config_by_key                                   Query a system config value by key.
+* call                                                       Call a contract by a function and parameters.
+* send_raw_transaction                                       Execute a signed transaction with a contract function and parameters.
+* send_raw_transaction_and_get_proof                         Execute a signed transaction with a contract function and parameters.
+* deploy                                                     Deploy a contract on blockchain.
+* compile                                                    Compile sol file to abi & bin files.
+* get_transaction_by_hash_with_proof                         Query the transaction and transaction proof by transaction hash.
+* get_transaction_receipt_by_hash_with_proof                 Query the receipt and transaction receipt proof by transaction hash.
+* generate_group                                             Generate a group for the specified node.
+* start_group                                                Start the specified group of the specified node.
+* stop_group                                                 Stop the specified group of the specified node.
+* remove_group                                               Remove the specified group of the specified node.
+* recover_group                                              Recover the specified group of the specified node.
+* query_group_status                                         Query the status of the specified group of the specified node.
+* get_node_info                                              Query the specified node information.
+* get_batch_receipts_by_block_number_and_range               Get batched transaction receipts according to block number and the transaction range.
+* get_batch_receipts_by_block_hash_and_range                 Get batched transaction receipts according to block hash and the transaction range.
+* system_config:set_value_by_key                             SystemConfigPrecompiled: Set a system config value by key.
+* consensus:add_sealer                                       ConsensusPrecompiled: Add a sealer node.
+* consensus:add_observer                                     ConsensusPrecompiled: Add an observer node.
+* consensus:remove                                           ConsensusPrecompiled: Remove a node.
+* cns:insert                                                 CNSPrecompiled: Insert CNS information for the given contract
+* cns:select_by_name                                         CNSPrecompiled: Query CNS information by contract name.
+* cns:select_by_name_and_version                             CNSPrecompiled: Query CNS information by contract name and contract version.
+* cns:get_contract_address                                   CNSPrecompiled: Query contract address by contract name.
+* permission:insert                                          PermissionPrecompiled: Grant the specified account write permission for the specified table.
+* permission:remove                                          PermissionPrecompiled: Remove the specified account write permission for the specified table.
+* permission:query_by_name                                   PermissionPrecompiled: Query the accounts who have write permission for the specified table.
+* permission:grant_write                                     PermissionPrecompiled: Grant the specified account write permission for the specified contract.
+* permission:revoke_write                                    PermissionPrecompiled: Revoke the specified account write permission for the specified contract.
+* permission:query_permission                                PermissionPrecompiled: Query the accounts who have write permission for the specified contract.
+* contract_life_cycle:freeze                                 ContractLifeCyclePrecompiled: Freeze the specified contract.
+* contract_life_cycle:unfreeze                               ContractLifeCyclePrecompiled: Unfreeze the specified contract.
+* contract_life_cycle:grant_manager                          ContractLifeCyclePrecompiled: Authorize a account to be the manager of the contract.
+* contract_life_cycle:get_status                             ContractLifeCyclePrecompiled: Query the status of the specified contract.
+* contract_life_cycle:list_manager                           ContractLifeCyclePrecompiled: Query the managers of the specified contract.
+* chain_governance_service:grant_committee_member            ChainGovernancePrecompiled: Grant the account committee member.
+* chain_governance_service:revoke_committee_member           ChainGovernancePrecompiled: Revoke the account from committee member.
+* chain_governance_service:list_committee_members            ChainGovernancePrecompiled: List all committee members.
+* chain_governance_service:query_committee_member_weight     ChainGovernancePrecompiled: Query the committee member weight.
+* chain_governance_service:update_committee_member_weight    ChainGovernancePrecompiled: Update the committee member weight.
+* chain_governance_service:query_votes_of_member             ChainGovernancePrecompiled: Query votes of a committee member.
+* chain_governance_service:query_votes_of_threshold          ChainGovernancePrecompiled: Query votes of updateThreshold operation.
+* chain_governance_service:update_threshold                  ChainGovernancePrecompiled: Update the threshold.
+* chain_governance_service:query_threshold                   ChainGovernancePrecompiled: Query the threshold.
+* chain_governance_service:grant_operator                    ChainGovernancePrecompiled: Grant the operator.
+* chain_governance_service:revoke_operator                   ChainGovernancePrecompiled: Revoke the operator.
+* chain_governance_service:list_operators                    ChainGovernancePrecompiled: List all operators.
+* chain_governance_service:freeze_account                    ChainGovernancePrecompiled: Freeze the contract
+* chain_governance_service:unfreeze_account                  ChainGovernancePrecompiled: Unfreeze the contract.
+* chain_governance_service:get_account_status                ChainGovernancePrecompiled: Get the contract status.
+* sql                                                        Execute CRUD operations with SQL.
 ```
 
 首先调用 `set_config` 来设置环境信息（配置信息详情参见：[服务配置](https://github.com/atomic-world/fisco-bcos-rust-sdk/tree/main/service#%E4%B8%80%E9%85%8D%E7%BD%AE)），比如：

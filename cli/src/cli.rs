@@ -24,7 +24,6 @@ use fisco_bcos_service::{
         contract_life_cycle_service::ContractLifeCycleService,
         precompiled_service::PrecompiledServiceError,
     },
-    event::event_service::EventService,
     create_config_with_file,
     create_web3_service_with_config,
 };
@@ -635,76 +634,85 @@ impl Cli {
         };
     }
 
-    async fn call_event_service(&mut self, method: &str, args: &Vec<String>) {
-        let config = self.config.as_ref().unwrap();
-        let event_service = EventService::new(config);
-        match method {
-            "event:block_notify" => {
-                let group_id = if args.len() == 0 {
-                    config.group_id
-                } else {
-                    convert_str_to_number::<u32>(&args[0], config.group_id)
-                };
-                let sleep_seconds = if args.len() >= 2 {
-                    convert_str_to_number::<u32>(&args[1], 1)
-                } else {
-                    1
-                };
-                let max_retry_times = if args.len() == 3 {
-                    convert_str_to_number::<i32>(&args[2], -1)
-                } else {
-                    -1
-                };
-                event_service.register_block_notify_listener(group_id, |result| {
-                    match result {
-                        Err(error) => println!("\nError: {:?}\n", error),
-                        Ok(data) =>  println!("\n{:?}\n", data),
-                    };
-                });
-                event_service.run_block_notify_loop(group_id, sleep_seconds, max_retry_times);
-            },
-            command => println!("\nError: Unavailable command {:?}\n", command),
-        };
-    }
-
     fn echo_help(&self) {
-        println!("\n1. Use set_config function to initialize the environment(e.g., set_config ./config/config.json)");
-        println!(
-            "2. Use the below functions to interact with the FISCO BCOS Service: {:?}(e.g., get_block_by_number 0x0)",
-            vec![
-                "get_client_version", "get_block_number", "get_pbft_view",
-                "get_sealer_list", "get_observer_list", "get_consensus_status",
-                "get_sync_status", "get_peers", "get_group_peers",
-                "get_node_id_list", "get_group_list", "get_block_by_hash",
-                "get_block_by_number", "get_block_header_by_hash", "get_block_header_by_number",
-                "get_block_hash_by_number", "get_transaction_by_hash", "get_transaction_by_block_hash_and_index",
-                "get_transaction_by_block_number_and_index", "get_transaction_receipt", "get_pending_transactions",
-                "get_pending_tx_size", "get_code", "get_total_transaction_count",
-                "call", "send_raw_transaction", "send_raw_transaction_and_get_proof", "deploy", "compile",
-                "get_system_config_by_key", "get_transaction_by_hash_with_proof", "get_transaction_receipt_by_hash_with_proof",
-                "generate_group", "start_group", "stop_group",
-                "remove_group", "recover_group", "query_group_status",
-                "get_node_info", "get_batch_receipts_by_block_number_and_range", "get_batch_receipts_by_block_hash_and_range",
-                "system_config:set_value_key",
-                "consensus:add_sealer", "consensus:add_observer", "consensus:remove",
-                "cns:insert", "cns:select_by_name", "cns:select_by_name_and_version", "cns:get_contract_address",
-                "permission:insert", "permission:remove", "permission:query_by_name",
-                "permission:grant_write", "permission:revoke_write", "permission:query_permission",
-                "contract_life_cycle:freeze", "contract_life_cycle:unfreeze", "contract_life_cycle:grant_manager",
-                "contract_life_cycle:get_status", "contract_life_cycle:list_manager",
-                "chain_governance_service:grant_committee_member", "chain_governance_service:revoke_committee_member",
-                "chain_governance_service:list_committee_members", "chain_governance_service:query_committee_member_weight",
-                "chain_governance_service:update_committee_member_weight",
-                "chain_governance_service:query_votes_of_member", "chain_governance_service:query_votes_of_threshold",
-                "chain_governance_service:update_threshold", "chain_governance_service:query_threshold",
-                "chain_governance_service:grant_operator", "chain_governance_service:revoke_operator", "chain_governance_service:list_operators",
-                "chain_governance_service:freeze_account", "chain_governance_service:unfreeze_account", "chain_governance_service:get_account_status",
-                "sql", "event:block_notify",
-            ],
-        );
-        println!("3. Type help to get help");
-        println!("4. Type CTRL-C or CTRL-D to quit");
-        println!("5. Visit https://github.com/kkawakam/rustyline#actions to get more actions\n");
+        println!("\n1. Use set_config to initialize environment(e.g., set_config ./config/config.json).");
+        println!("2. Use the below APIs to interact with FISCO BCOS：\n");
+        println!("* get_client_version                                         Query the current node version.");
+        println!("* get_block_number                                           Query the number of most recent block.");
+        println!("* get_pbft_view                                              Query the pbft view of node.");
+        println!("* get_sealer_list                                            Query nodeId list for sealer nodes.");
+        println!("* get_observer_list                                          Query nodeId list for observer nodes.");
+        println!("* get_consensus_status                                       Query consensus status.");
+        println!("* get_sync_status                                            Query sync status.");
+        println!("* get_peers                                                  Query peers currently connected to the client.");
+        println!("* get_group_peers                                            Query nodeId list for sealer and observer nodes.");
+        println!("* get_node_id_list                                           Query nodeId list for all connected nodes.");
+        println!("* get_group_list                                             Query group list.");
+        println!("* get_block_by_hash                                          Query information about a block by hash.");
+        println!("* get_block_by_number                                        Query information about a block by number.");
+        println!("* get_block_header_by_hash                                   Query information about a block header by hash.");
+        println!("* get_block_header_by_number                                 Query information about a block header by block number.");
+        println!("* get_block_hash_by_number                                   Query block hash by block number.");
+        println!("* get_transaction_by_hash                                    Query information about a transaction requested by transaction hash.");
+        println!("* get_transaction_by_block_hash_and_index                    Query information about a transaction by block hash and transaction index position.");
+        println!("* get_transaction_by_block_number_and_index                  Query information about a transaction by block number and transaction index position.");
+        println!("* get_transaction_receipt                                    Query the receipt of a transaction by transaction hash.");
+        println!("* get_pending_transactions                                   Query pending transactions.");
+        println!("* get_pending_tx_size                                        Query pending transactions size.");
+        println!("* get_code                                                   Query code at a given address.");
+        println!("* get_total_transaction_count                                Query total transaction count.");
+        println!("* get_system_config_by_key                                   Query a system config value by key.");
+        println!("* call                                                       Call a contract by a function and parameters.");
+        println!("* send_raw_transaction                                       Execute a signed transaction with a contract function and parameters.");
+        println!("* send_raw_transaction_and_get_proof                         Execute a signed transaction with a contract function and parameters.");
+        println!("* deploy                                                     Deploy a contract on blockchain.");
+        println!("* compile                                                    Compile sol file to abi & bin files.");
+        println!("* get_transaction_by_hash_with_proof                         Query the transaction and transaction proof by transaction hash.");
+        println!("* get_transaction_receipt_by_hash_with_proof                 Query the receipt and transaction receipt proof by transaction hash.");
+        println!("* generate_group                                             Generate a group for the specified node.");
+        println!("* start_group                                                Start the specified group of the specified node.");
+        println!("* stop_group                                                 Stop the specified group of the specified node.");
+        println!("* remove_group                                               Remove the specified group of the specified node.");
+        println!("* recover_group                                              Recover the specified group of the specified node.");
+        println!("* query_group_status                                         Query the status of the specified group of the specified node.");
+        println!("* get_node_info                                              Query the specified node information.");
+        println!("* get_batch_receipts_by_block_number_and_range               Get batched transaction receipts according to block number and the transaction range.");
+        println!("* get_batch_receipts_by_block_hash_and_range                 Get batched transaction receipts according to block hash and the transaction range.");
+        println!("* system_config:set_value_by_key                             SystemConfigPrecompiled: Set a system config value by key.");
+        println!("* consensus:add_sealer                                       ConsensusPrecompiled: Add a sealer node.");
+        println!("* consensus:add_observer                                     ConsensusPrecompiled: Add an observer node.");
+        println!("* consensus:remove                                           ConsensusPrecompiled: Remove a node.");
+        println!("* cns:insert                                                 CNSPrecompiled: Insert CNS information for the given contract");
+        println!("* cns:select_by_name                                         CNSPrecompiled: Query CNS information by contract name.");
+        println!("* cns:select_by_name_and_version                             CNSPrecompiled: Query CNS information by contract name and contract version.");
+        println!("* cns:get_contract_address                                   CNSPrecompiled: Query contract address by contract name.");
+        println!("* permission:insert                                          PermissionPrecompiled: Grant the specified account write permission for the specified table.");
+        println!("* permission:remove                                          PermissionPrecompiled: Remove the specified account write permission for the specified table.");
+        println!("* permission:query_by_name                                   PermissionPrecompiled: Query the accounts who have write permission for the specified table.");
+        println!("* permission:grant_write                                     PermissionPrecompiled: Grant the specified account write permission for the specified contract.");
+        println!("* permission:revoke_write                                    PermissionPrecompiled: Revoke the specified account write permission for the specified contract.");
+        println!("* permission:query_permission                                PermissionPrecompiled: Query the accounts who have write permission for the specified contract.");
+        println!("* contract_life_cycle:freeze                                 ContractLifeCyclePrecompiled: Freeze the specified contract.");
+        println!("* contract_life_cycle:unfreeze                               ContractLifeCyclePrecompiled: Unfreeze the specified contract.");
+        println!("* contract_life_cycle:grant_manager                          ContractLifeCyclePrecompiled: Authorize a account to be the manager of the contract.");
+        println!("* contract_life_cycle:get_status                             ContractLifeCyclePrecompiled: Query the status of the specified contract.");
+        println!("* contract_life_cycle:list_manager                           ContractLifeCyclePrecompiled: Query the managers of the specified contract.");
+        println!("* chain_governance_service:grant_committee_member            ChainGovernancePrecompiled: Grant the account committee member.");
+        println!("* chain_governance_service:revoke_committee_member           ChainGovernancePrecompiled: Revoke the account from committee member.");
+        println!("* chain_governance_service:list_committee_members            ChainGovernancePrecompiled: List all committee members.");
+        println!("* chain_governance_service:query_committee_member_weight     ChainGovernancePrecompiled: Query the committee member weight.");
+        println!("* chain_governance_service:update_committee_member_weight    ChainGovernancePrecompiled: Update the committee member weight.");
+        println!("* chain_governance_service:query_votes_of_member             ChainGovernancePrecompiled: Query votes of a committee member.");
+        println!("* chain_governance_service:query_votes_of_threshold          ChainGovernancePrecompiled: Query votes of updateThreshold operation.");
+        println!("* chain_governance_service:update_threshold                  ChainGovernancePrecompiled: Update the threshold.");
+        println!("* chain_governance_service:query_threshold                   ChainGovernancePrecompiled: Query the threshold.");
+        println!("* chain_governance_service:grant_operator                    ChainGovernancePrecompiled: Grant the operator.");
+        println!("* chain_governance_service:revoke_operator                   ChainGovernancePrecompiled: Revoke the operator.");
+        println!("* chain_governance_service:list_operators                    ChainGovernancePrecompiled: List all operators.");
+        println!("* chain_governance_service:freeze_account                    ChainGovernancePrecompiled: Freeze the contract");
+        println!("* chain_governance_service:unfreeze_account                  ChainGovernancePrecompiled: Unfreeze the contract.");
+        println!("* chain_governance_service:get_account_status                ChainGovernancePrecompiled: Get the contract status.");
+        println!("* sql                                                        Execute CRUD operations with SQL.\n");
     }
 
     pub(crate) fn new() -> Cli {
@@ -733,7 +741,7 @@ impl Cli {
             },
             _ => {
                 if self.config.is_none() {
-                    println!("\nError: Please initialize the environment with set_config function first\n");
+                    println!("\nError: Please initialize the environment with set_config first\n");
                 } else {
                     if method.starts_with("system_config:") {
                         self.call_system_config_service(&args).await
@@ -747,8 +755,6 @@ impl Cli {
                         self.call_contract_life_cycle_service(method, &args).await
                     } else if method.starts_with("chain_governance_service:")  {
                         self.call_chain_governance_service(method, &args).await
-                    } else if method.starts_with("event:") {
-                        self.call_event_service(method, &args).await
                     } else if method.eq("sql") {
                         self.call_sql_service(&args).await
                     } else {
