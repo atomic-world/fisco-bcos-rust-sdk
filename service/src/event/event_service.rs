@@ -99,14 +99,16 @@ impl<'l> EventService<'l> {
                                         self.event_emitter.emit(key, &Err(err));
                                         self.stop_event_loop(key);
                                         break;
+                                    } else if !self.get_event_loop_running_status(key) {
+                                        let err = EventServiceError::CustomError {
+                                            message: "SSL_read invoked failed, and the event loop had been stopped".to_string(),
+                                        };
+                                        self.event_emitter.emit(key, &Err(err));
+                                        break;
                                     } else {
                                         self.event_emitter.emit(key, &Err(EventServiceError::ChannelError(err)));
-                                        if self.get_event_loop_running_status(key) {
-                                            remain_retry_times -= 1;
-                                            thread::sleep(Duration::from_millis((sleep_seconds * 1000) as u64));
-                                        } else {
-                                            break;
-                                        }
+                                        remain_retry_times -= 1;
+                                        thread::sleep(Duration::from_millis((sleep_seconds * 1000) as u64));
                                     }
                                 },
                             };
