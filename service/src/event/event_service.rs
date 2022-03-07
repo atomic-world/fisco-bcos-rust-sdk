@@ -6,7 +6,6 @@ use thiserror::Error;
 use serde_json::{Value as JSONValue, json};
 
 use crate::config::Config;
-use crate::tassl::TASSLError;
 use crate::event::event_emitter::EventEmitter;
 use crate::channel::{
     MessageType,
@@ -90,69 +89,24 @@ impl<'l> EventService<'l> {
                                     );
                                 },
                                 Err(err) => {
-                                    if !self.get_event_loop_running_status(key) {
-                                        self.event_emitter.emit(
-                                            key,
-                                            &Err(EventServiceError::ChannelError(err)),
-                                        );
-                                        break;
-                                    } else if max_retry_times != -1 && remain_retry_times == 0 {
+                                    if max_retry_times != -1 && remain_retry_times == 0 {
                                         let err = EventServiceError::CustomError {
                                             message: format!(
                                                 "SSL_read invoked had failed over {:?} times, stopping the loop now",
                                                 max_retry_times
                                             ),
                                         };
-                                        self.event_emitter.emit(
-                                            key,
-                                            &Err(err),
-                                        );
+                                        self.event_emitter.emit(key, &Err(err));
                                         self.stop_event_loop(key);
                                         break;
                                     } else {
-                                        let (need_reconnect, mut need_re_request) = match &err {
-                                            ChannelError::TASSLError(TASSLError::ServiceError { error_code, .. }) => {
-                                                // 1. 根据调试，关闭服务节点时，得到的错误状态码为 5（SSL_ERROR_SYSCALL）,
-                                                // 所以在状态码为 6（SSL_ERROR_ZERO_RETURN）或 5（SSL_ERROR_SYSCALL）时，尝试重新发起连接操作。
-                                                // 2. SSL 重连后，需要重新发送监听请求，为避免请求失败【状态码为 1（SSL_ERROR_SSL）】，
-                                                // 故需要检测该值，以便在下次循环中尝试重新发送监听请求。
-                                                match error_code {
-                                                    Some(code) => (*code == 5 || *code == 6, *code == 1),
-                                                    None => (false, false),
-                                                }
-                                            },
-                                            _ => (false, false),
-                                        };
-                                        if need_reconnect || need_re_request {
-                                            if need_reconnect {
-                                                tassl.close();
-                                                if let Err(err) = tassl.connect(&self.config.node.host, self.config.node.port) {
-                                                    self.event_emitter.emit(
-                                                        key,
-                                                        &Err(EventServiceError::ChannelError(ChannelError::TASSLError(err))),
-                                                    );
-                                                } else {
-                                                    need_re_request = true;
-                                                }
-                                            }
-                                            if need_re_request {
-                                                if let Err(err) = tassl.write(&request_data) {
-                                                    self.event_emitter.emit(
-                                                        key,
-                                                        &Err(EventServiceError::ChannelError(ChannelError::TASSLError(err))),
-                                                    );
-                                                } else {
-                                                    continue;
-                                                }
-                                            }
+                                        self.event_emitter.emit(key, &Err(EventServiceError::ChannelError(err)));
+                                        if self.get_event_loop_running_status(key) {
+                                            remain_retry_times -= 1;
+                                            thread::sleep(Duration::from_millis((sleep_seconds * 1000) as u64));
                                         } else {
-                                            self.event_emitter.emit(
-                                                key,
-                                                &Err(EventServiceError::ChannelError(err)),
-                                            );
+                                            break;
                                         }
-                                        remain_retry_times -= 1;
-                                        thread::sleep(Duration::from_millis((sleep_seconds * 1000) as u64));
                                     }
                                 },
                             };

@@ -18,8 +18,7 @@ pub enum TASSLError {
 
     #[error("tassl auth error")]
     ServiceError {
-        error_code: Option<i32>,
-        return_code: i32,
+        code: i32,
         message: String,
     },
 
@@ -36,21 +35,14 @@ pub struct TASSL {
 }
 
 impl TASSL {
-    fn parse_ffi_invoke_result(&self, return_code: c_int, message: &str) -> Result<c_int, TASSLError> {
-        if return_code <= 0 {
-            let error_code = match *self.ssl.borrow() {
-                None => None,
-                Some(ssl) => unsafe {
-                    Some(SSL_get_error(ssl, return_code))
-                }
-            };
+    fn parse_ffi_invoke_result(&self, code: c_int, message: &str) -> Result<c_int, TASSLError> {
+        if code <= 0 {
             Err(TASSLError::ServiceError {
-                error_code,
-                return_code,
+                code,
                 message: message.to_owned(),
             })
         } else {
-            Ok(return_code)
+            Ok(code)
         }
     }
 
