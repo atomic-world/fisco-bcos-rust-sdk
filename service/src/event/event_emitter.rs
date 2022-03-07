@@ -31,10 +31,16 @@ impl<'l, T> EventEmitter<'l, T> {
     }
 
     pub fn remove(&self, name: &str) {
+        let mut  removed_indexes: Vec<usize> = vec![];
         for (index, listener) in self.listeners.borrow().iter().enumerate() {
             if listener.name.eq(name) {
-                self.listeners.borrow_mut().remove(index);
+                removed_indexes.push(index);
             }
+        }
+
+       let mut listeners =  self.listeners.borrow_mut();
+        for removed_index in removed_indexes {
+            listeners.remove(removed_index);
         }
     }
 }

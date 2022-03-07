@@ -24,9 +24,8 @@ impl FetcherTrait for ChannelFetcher {
         let tassl = open_tassl(&self.config)?;
         let request_data = pack_channel_message(&serde_json::to_vec(&params)?, MessageType::RpcRequest);
         tassl.write(&request_data)?;
-        let data = channel_read(&tassl)?;
+        let response = channel_read(&tassl)?;
         tassl.close();
-        let response= serde_json::from_str(std::str::from_utf8(&data)?.trim_end_matches("\n"))?;
         parse_response(&response)
     }
 }

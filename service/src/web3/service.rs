@@ -37,9 +37,6 @@ pub enum ServiceError {
     #[error("serde_json::Error")]
     SerdeJsonError(#[from] serde_json::Error),
 
-    #[error("std::str::Utf8Error")]
-    StrFromUtf8Error(#[from] std::str::Utf8Error),
-
     #[error("channel error")]
     ChannelError(#[from] ChannelError),
 

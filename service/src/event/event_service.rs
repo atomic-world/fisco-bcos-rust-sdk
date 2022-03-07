@@ -13,9 +13,10 @@ use crate::channel::{
     ChannelError,
     open_tassl,
     channel_read,
+    pack_amop_message,
     pack_channel_message,
-    parse_block_notify_data,
 };
+use crate::event::event_log_param::EventLogParam;
 
 type EventEmitterResult = Result<JSONValue, EventServiceError>;
 
@@ -38,7 +39,11 @@ pub struct EventService<'l> {
 
 impl<'l> EventService<'l> {
     fn get_block_notify_key(&self, group_id: u32) -> String {
-        format!("_block_notify_{:?}", group_id)
+        format!("_block_notify_{:}", group_id)
+    }
+
+    fn get_event_log_key(&self, event_log_param: &EventLogParam) -> String {
+        format!("_event_log_{:}", event_log_param.filter_id)
     }
 
     fn get_event_loop_running_status(&self, key: &str) -> bool {
@@ -62,14 +67,13 @@ impl<'l> EventService<'l> {
         self.set_event_loop_running_status(key, false);
     }
 
-    fn run_event_loop<F>(
+    fn run_event_loop(
         &self,
         key: &str,
         request_data: &[u8],
         sleep_seconds: u32,
         max_retry_times: i32,
-        fn_result_parse: F,
-    ) where F: FnOnce(Vec<u8>) -> JSONValue + Copy {
+    )  {
         match open_tassl(&self.config) {
             Ok(tassl) => {
                 match tassl.write(&request_data) {
@@ -77,7 +81,7 @@ impl<'l> EventService<'l> {
                         let mut remain_retry_times = max_retry_times;
                         self.set_event_loop_running_status(key, true);
                         while self.get_event_loop_running_status(key) {
-                            match channel_read(&tassl).map(fn_result_parse) {
+                            match channel_read(&tassl) {
                                 Ok(value) => {
                                     remain_retry_times = max_retry_times;
                                     self.event_emitter.emit(
@@ -205,11 +209,56 @@ impl<'l> EventService<'l> {
             &serde_json::to_vec(&params).unwrap(),
             MessageType::AMOPClientTopics,
         );
-        self.run_event_loop(&key, &request_data, sleep_seconds, max_retry_times, parse_block_notify_data);
+        self.run_event_loop(&key, &request_data, sleep_seconds, max_retry_times);
     }
 
     pub fn stop_block_notify_loop(&self, group_id: u32) {
         let key = self.get_block_notify_key(group_id);
+        self.stop_event_loop(&key);
+    }
+
+    pub fn register_event_log_listener<F>(
+        &self,
+        event_log_param: &EventLogParam,
+        listener: F
+    ) where F: Fn(&EventEmitterResult) + Send + Sync + 'l {
+        let key = self.get_event_log_key(event_log_param);
+        self.event_emitter.on(&key, listener);
+    }
+
+    pub fn remove_event_log_listener(&self, event_log_param: &EventLogParam) {
+        let key = self.get_event_log_key(event_log_param);
+        self.event_emitter.remove(&key);
+    }
+
+    ///
+    /// sleep_seconds：链上数据读取失败后，进入下一轮监听前要等待的时间（单位为秒）。
+    ///
+    /// max_retry_times：链上数据读取失败后，最大重试次数，如果失败次数大于指定的值，将主动终止 loop。当值为 -1 时，表示无限循环。
+    ///
+    pub fn run_event_log_loop(&self, event_log_param: &EventLogParam, sleep_seconds: u32, max_retry_times: i32) {
+        let key = self.get_event_log_key(event_log_param);
+        let params = json!({
+            "fromBlock": (*event_log_param.from_block.borrow()).clone(),
+            "toBlock": (*event_log_param.to_block.borrow()).clone(),
+            "addresses": (*event_log_param.addresses.borrow()).clone(),
+            "topics": (*event_log_param.topics.borrow()).clone(),
+            "groupID": self.config.group_id.to_string(),
+            "filterID": event_log_param.filter_id.clone(),
+        });
+        let amop_data = pack_amop_message(
+            &Vec::from(""),
+            &serde_json::to_vec(&params).unwrap(),
+        );
+        let request_data = pack_channel_message(
+            &amop_data,
+            MessageType::ClientRegisterEventLog,
+        );
+        self.run_event_loop(&key, &request_data, sleep_seconds, max_retry_times);
+    }
+
+    pub fn stop_event_log_loop(&self, event_log_param: &EventLogParam) {
+        let key = self.get_event_log_key(event_log_param);
         self.stop_event_loop(&key);
     }
 }
