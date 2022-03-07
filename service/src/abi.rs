@@ -3,7 +3,7 @@ use thiserror::Error;
 use wedpr_l_utils::traits::Hash;
 use wedpr_l_crypto_hash_sm3::WedprSm3;
 use ethabi::{
-    Bytes, Contract, Function,
+    Contract, Function,
     Param, param_type::{ParamType, Writer},
     token::{LenientTokenizer, Token, Tokenizer},
     Error as ETHError,
@@ -137,8 +137,10 @@ impl ABI {
         match self.contract.as_ref() {
             None => Err(self.get_load_contract_error()),
             Some(contract) => {
-                let constructor = contract.constructor.as_ref().unwrap();
-                Ok(self.parse_tokens(&constructor.inputs, params)?)
+                match contract.constructor.as_ref() {
+                    Some(constructor) => Ok(self.parse_tokens(&constructor.inputs, params)?),
+                    None => Ok(vec![]),
+                }
             }
         }
     }
@@ -150,9 +152,11 @@ impl ABI {
                 match self.abi_bin.as_ref() {
                     None => Err(self.get_load_abi_bin_error()),
                     Some(abi_bin) => {
-                        let constructor = contract.constructor.as_ref().unwrap();
-                        let inputs = constructor.encode_input(Bytes::from(abi_bin.as_slice()), &tokens)?;
-                        Ok(hex::decode(Vec::from(inputs))?)
+                        let data = match contract.constructor.as_ref() {
+                            Some(constructor) => constructor.encode_input(abi_bin.clone(), &tokens)?,
+                            None => abi_bin.clone().into_iter().chain(eth_encode(&tokens)).collect(),
+                        };
+                        Ok(hex::decode(data)?)
                     },
                 }
             }
