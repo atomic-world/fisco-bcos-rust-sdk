@@ -1,10 +1,14 @@
+use std::collections::HashMap;
 use std::fs;
 use thiserror::Error;
 use wedpr_l_utils::traits::Hash;
 use wedpr_l_crypto_hash_sm3::WedprSm3;
 use ethabi::{
-    Contract, Function,
-    Param, param_type::{ParamType, Writer},
+    Contract, Function, Event,
+    Log, RawLog,
+    Param, LogParam, EventParam,
+    param_type::{ParamType, Writer},
+    ethereum_types::H256,
     token::{LenientTokenizer, Token, Tokenizer},
     Error as ETHError,
     Result as ETHResult,
@@ -82,6 +86,64 @@ impl ABI {
         let mut transaction_data = self.sm_short_signature(&function.name, &params);
         transaction_data.extend(eth_encode(tokens));
         Ok(transaction_data)
+    }
+
+    fn event_indexed_params(&self, event: &Event, indexed: bool) -> Vec<EventParam> {
+        event.inputs.iter().filter(|p| p.indexed == indexed).cloned().collect()
+    }
+
+    fn convert_topic_param_type(&self, kind: &ParamType) -> ParamType {
+        match kind {
+            ParamType::String
+            | ParamType::Bytes
+            | ParamType::Array(_)
+            | ParamType::FixedArray(_, _)
+            | ParamType::Tuple(_) => ParamType::FixedBytes(32),
+            _ => kind.clone(),
+        }
+    }
+
+    fn event_sm_signature(&self, event: &Event) -> H256 {
+        let types = event.inputs.iter().map(|p| Writer::write(&p.kind)).collect::<Vec<String>>().join(",");
+        let data: Vec<u8> = From::from(format!("{}({})", event.name, types).as_str());
+        let sm3_hash = WedprSm3::default();
+        let hash= sm3_hash.hash(&data)[..32].to_vec();
+        H256::from_slice(&hash)
+    }
+
+    fn parse_sm_log(&self, event: &Event, log: RawLog) -> Result<Log, ETHError> {
+        let topics = log.topics;
+        let data = log.data;
+        let topics_len = topics.len();
+        let topic_params = self.event_indexed_params(event, true);
+        let data_params = self.event_indexed_params(event, false);
+        let to_skip = if event.anonymous {
+            0
+        } else {
+            let event_signature = topics.get(0).ok_or(ETHError::InvalidData)?;
+            if event_signature != &self.event_sm_signature(event) {
+                return Err(ETHError::InvalidData);
+            }
+            1
+        };
+        let topic_types =
+            topic_params.iter().map(|p| self.convert_topic_param_type(&p.kind)).collect::<Vec<ParamType>>();
+        let flat_topics = topics.into_iter().skip(to_skip).flat_map(|t| t.as_ref().to_vec()).collect::<Vec<u8>>();
+        let topic_tokens = eth_decode(&topic_types, &flat_topics)?;
+        if topic_tokens.len() != topics_len - to_skip {
+            return Err(ETHError::InvalidData);
+        }
+        let topics_named_tokens = topic_params.into_iter().map(|p| p.name).zip(topic_tokens.into_iter());
+        let data_types = data_params.iter().map(|p| p.kind.clone()).collect::<Vec<ParamType>>();
+        let data_tokens = eth_decode(&data_types, &data)?;
+        let data_named_tokens = data_params.into_iter().map(|p| p.name).zip(data_tokens.into_iter());
+        let named_tokens = topics_named_tokens.chain(data_named_tokens).collect::<HashMap<String, Token>>();
+        let decoded_params = event.inputs
+            .iter()
+            .map(|p| LogParam { name: p.name.clone(), value: named_tokens[&p.name].clone() })
+            .collect();
+        let result = Log { params: decoded_params };
+        Ok(result)
     }
 
     pub fn new_with_contract_config(
@@ -194,6 +256,20 @@ impl ABI {
                 }
                 let data = hex::decode(value.to_owned().trim_start_matches("0x").as_bytes())?;
                 Ok(Some(function.decode_output(&data)?))
+            }
+        }
+    }
+
+    pub fn decode_event(&self, event_name: &str, raw_log: &RawLog) -> Result<Log, ABIError> {
+        match self.contract.as_ref() {
+            None => Err(self.get_load_contract_error()),
+            Some(contract) => {
+                let event = contract.event(event_name)?;
+                if self.sm_crypto {
+                    Ok(self.parse_sm_log(&event, raw_log.clone())?)
+                } else {
+                    Ok(event.parse_log(raw_log.clone())?)
+                }
             }
         }
     }
