@@ -132,7 +132,7 @@ ________ ______  ______   ______   ______       _______   ______   ______   ____
 * sql                                                        Execute CRUD operations with SQL.
 ```
 
-首先调用 `set_config` 来设置环境信息（配置信息详情参见：[服务配置](https://github.com/atomic-world/fisco-bcos-rust-sdk/tree/main/service#%E4%B8%80%E9%85%8D%E7%BD%AE)），比如：
+首先调用 `set_config` 来设置环境信息（配置信息详情参见：[服务配置](https://github.com/atomic-world/fisco-bcos-rust-sdk/tree/fisco-2.x/service#%E4%B8%80%E9%85%8D%E7%BD%AE)），比如：
 
 ```shell
 >> set_config ./configs/config.json
@@ -146,7 +146,7 @@ ________ ______  ______   ______   ______       _______   ______   ______   ____
 Object({"Build Time": String("20210201 10:15:37"), "Build Type": String("Darwin/appleclang/RelWithDebInfo"), "Chain Id": String("1"), "FISCO-BCOS Version": String("2.7.2"), "Git Branch": String("HEAD"), "Git Commit Hash": String("4c8a5bbe44c19db8a002017ff9dbb16d3d28e9da"), "Supported Version": String("2.7.2")})
 ```
 
-交互方法的参数信息参见：[FISCO BCOS Service](https://github.com/atomic-world/fisco-bcos-rust-sdk/tree/main/service#%E4%BD%BF%E7%94%A8)。
+交互方法的参数信息参见：[FISCO BCOS Service](https://github.com/atomic-world/fisco-bcos-rust-sdk/tree/fisco-2.x/service#%E4%BD%BF%E7%94%A8)。
 
 注意事项：
 

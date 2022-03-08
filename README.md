@@ -38,10 +38,10 @@ cp nodes/127.0.0.1/sdk/* ~/workspace/fisco-bcos-rust-sdk/configs/authentication/
 ```
 ## CLI
 
-详情参见：[fisco-bcos-cli](https://github.com/atomic-world/fisco-bcos-rust-sdk/tree/main/cli)
+详情参见：[fisco-bcos-cli](https://github.com/atomic-world/fisco-bcos-rust-sdk/tree/fisco-2.x/cli)
 ## API Service
 
-详情参见：[fisco-bcos-service](https://github.com/atomic-world/fisco-bcos-rust-sdk/tree/main/service)
+详情参见：[fisco-bcos-service](https://github.com/atomic-world/fisco-bcos-rust-sdk/tree/fisco-2.x/service)
 
 # TODO
 
