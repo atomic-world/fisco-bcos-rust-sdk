@@ -63,16 +63,14 @@ impl EventLogParam {
 
     pub fn remove_address(&self, address: &str) {
         let addresses_lock = self.addresses.clone();
+        let mut addresses_write_lock = addresses_lock.write().unwrap();
+
         let mut removed_indexes: Vec<usize> = vec![];
-        let addresses_read_lock = addresses_lock.read().unwrap();
-        for (index, value) in addresses_read_lock.iter().enumerate() {
+        for (index, value) in addresses_write_lock.iter().enumerate() {
             if value.eq(address) {
                 removed_indexes.push(index);
             }
         }
-        drop(addresses_read_lock);
-
-        let mut addresses_write_lock = addresses_lock.write().unwrap();
         for removed_index in removed_indexes {
             addresses_write_lock.remove(removed_index);
         }
@@ -92,16 +90,14 @@ impl EventLogParam {
 
     pub fn remove_topic(&self, topic: &str) {
         let topics_lock = self.topics.clone();
-        let topics_read_lock = topics_lock.read().unwrap();
+        let mut topics_write_lock = topics_lock.write().unwrap();
+
         let mut removed_indexes: Vec<usize> = vec![];
-        for (index, value) in topics_read_lock.iter().enumerate() {
+        for (index, value) in topics_write_lock.iter().enumerate() {
             if value.eq(topic) {
                 removed_indexes.push(index);
             }
         }
-        drop(topics_read_lock);
-
-        let mut topics_write_lock = topics_lock.write().unwrap();
         for removed_index in removed_indexes {
             topics_write_lock.remove(removed_index);
         }

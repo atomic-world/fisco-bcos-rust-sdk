@@ -36,15 +36,14 @@ impl<'l, T> EventEmitter<'l, T> {
 
     pub fn remove(&self, name: &str) {
         let listeners_lock = self.listeners.clone();
+        let mut listeners_write_lock = listeners_lock.write().unwrap();
+
         let mut  removed_indexes: Vec<usize> = vec![];
-        let listeners_read_lock = listeners_lock.read().unwrap();
-        for (index, listener) in listeners_read_lock.iter().enumerate() {
+        for (index, listener) in listeners_write_lock.iter().enumerate() {
             if listener.name.eq(name) {
                 removed_indexes.push(index);
             }
         }
-        drop(listeners_read_lock);
-        let mut listeners_write_lock = listeners_lock.write().unwrap();
         for removed_index in removed_indexes {
             listeners_write_lock.remove(removed_index);
         }
