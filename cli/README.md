@@ -5,7 +5,7 @@ Rust 版 FISCO BCOS 可交互式命令行工具。
 # 安装
 
 ```shell
-$ cargo install --force fisco-bcos-cli
+$ cargo install --force --version '>=0.4, <1' fisco-bcos-cli
 ```
 
 此 crate 使用了 [TASSL](https://github.com/jntass/TASSL) 来处理 `TLS` 连接，在 `Linux` 或 `Macos` 下无需做任何额外操作，其他环境下则需要指定以下环境变量：
@@ -26,7 +26,7 @@ $ fisco-bcos-cli
 
 ```shell
 =============================================================================================
-Welcome to FISCO BCOS console(0.3.0).
+Welcome to FISCO BCOS console(0.4.0).
 Type 'help' for help.
 Type 'CTRL-C' or 'CTRL-D' to quit console.
 Visit https://github.com/kkawakam/rustyline#actions to get more actions.

@@ -2,13 +2,12 @@
 
 ![logo](https://raw.githubusercontent.com/FISCO-BCOS/FISCO-BCOS/master/docs/FISCO_BCOS_Logo.svg)
 
-[![GitHub license](https://img.shields.io/badge/%20license-Apache%202.0-green)](https://github.com/CatLibrary/fisco-bcos-rust-sdk/blob/main/LICENSE)
-[![GitHub issues](https://img.shields.io/github/issues/CatLibrary/fisco-bcos-rust-sdk.svg)](https://github.com/CatLibrary/fisco-bcos-rust-sdk/issues)
-[![Code Lines](https://tokei.rs/b1/github/CatLibrary/fisco-bcos-rust-sdk)](https://github.com/CatLibrary/fisco-bcos-rust-sdk)
+[![GitHub license](https://img.shields.io/badge/%20license-Apache%202.0-green)](https://www.apache.org/licenses/LICENSE-2.0.txt)
+[![GitHub issues](https://img.shields.io/github/issues/atomic-world/fisco-bcos-rust-sdk.svg)](https://github.com/atomic-world/fisco-bcos-rust-sdk/issues)
 
 ____
 
-Rust SDK 为联盟链平台 [FISCO BCOS](https://github.com/FISCO-BCOS/FISCO-BCOS) 提供面向 Rust 的应用程序接口，使用 Rust SDK 可以简单快捷地开发基于 FISCO-BCOS 的 Rust 应用。 Rust SDK **仅支持** 2.7.0 及以上版本的 [FISCO BCOS](https://github.com/FISCO-BCOS/FISCO-BCOS)。
+Rust SDK 为联盟链平台 [FISCO BCOS](https://github.com/FISCO-BCOS/FISCO-BCOS) 提供面向 Rust 的应用程序接口，使用 Rust SDK 可以简单快捷地开发基于 FISCO-BCOS 的 Rust 应用。Rust SDK 仅支持 `>=2.7.x, <3.x` 版本的 [FISCO BCOS](https://github.com/FISCO-BCOS/FISCO-BCOS)；如需主持 `3.x` 版本的 [FISCO BCOS](https://github.com/FISCO-BCOS/FISCO-BCOS)，请移步：[https://github.com/atomic-world/fisco-bcos-rust-sdk/tree/fisco-3.x](https://github.com/atomic-world/fisco-bcos-rust-sdk/tree/fisco-3.x)。
 
 # 关键特性
 
@@ -18,6 +17,7 @@ Rust SDK 为联盟链平台 [FISCO BCOS](https://github.com/FISCO-BCOS/FISCO-BCO
 * 支持国密和非国密下部署、调用 Solidity 合约接口。
 * 支持合约编译，可将 Solidity 合约编译成 abi 和 bin 文件。
 * 提供交互式的 CLI 工具，支持用户部署及调用合约、管理区块链状态等操作。
+* 支持合约事件监听。
 
 # 使用
 
@@ -46,7 +46,6 @@ cp nodes/127.0.0.1/sdk/* ~/workspace/fisco-bcos-rust-sdk/configs/authentication/
 # TODO
 
 * 支持 [AMOP](https://fisco-bcos-documentation.readthedocs.io/zh_CN/latest/docs/manual/amop_protocol.html)。
-* 支持合约事件监听。
 
 # License
 

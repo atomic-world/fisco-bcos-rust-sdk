@@ -5,10 +5,9 @@ use rustyline::Editor;
 
 use crate::cli::Cli;
 
-
 fn print_help() {
     println!("=============================================================================================");
-    println!("Welcome to FISCO BCOS console(0.3.0).");
+    println!("Welcome to FISCO BCOS console(0.4.0).");
     println!("Type 'help' for help.");
     println!("Type 'CTRL-C' or 'CTRL-D' to quit console.");
     println!("Visit https://github.com/kkawakam/rustyline#actions to get more actions.\n");

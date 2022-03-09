@@ -1,6 +1,6 @@
 [package]
 name = "fisco-bcos-service"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Tom.Huang <hzlhu.dargon@gmail.com>"]
 edition = "2018"
 license = "Apache-2.0"

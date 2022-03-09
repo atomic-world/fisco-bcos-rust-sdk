@@ -6,7 +6,7 @@ Rust SDK For FISCO BCOS 2.7.0+
 
 ```toml
 [dependencies]
-fisco-bcos-service = "0.3"
+fisco-bcos-service = ">=0.4, <1"
 ```
 
 此 crate 使用了 [TASSL](https://github.com/jntass/TASSL) 来处理 `TLS` 连接，在 `Linux` 或 `Macos` 下无需做任何额外操作，其他环境下则需要指定以下环境变量：
@@ -99,7 +99,7 @@ fisco-bcos-service = "0.3"
     * `source`：Solidity 合约源文件所在路径。
     * `output`：Solidity 合约编译后的 `abi` 及 `bin` 文件输出目录（该目录需自行创建）。
 
-* `authentication`：节点验证配置信息（仅在 `service_type` 为 `channel` 时设置），包含以下属性：
+* `authentication`：节点验证配置信息，包含以下属性：
 
     * `ca_cert`：CA 证书文件路径。
     * `sign_cert`：签名证书文件路径。
@@ -110,7 +110,7 @@ fisco-bcos-service = "0.3"
 * `sm_crypto`：交易签名是否使用`国密`。
 * `group_id`：组 ID。
 * `chain_id`：链 ID。
-* `timeout_seconds`： 网络过期时间（单位为秒）。
+* `timeout_seconds`： 网络请求过期时间（单位为秒）。
 
 **注：配置项中 `account`、`contract`、`authentication` 中的路径如果使用相对路径，它的参考路径为该配置文件所在路径。**
 
@@ -494,9 +494,13 @@ let event_service = create_event_service(config_file_path).unwrap();
     * `remove_block_notify_listener`
     * `run_block_notify_loop`
     * `stop_block_notify_loop`
+    * `register_event_log_listener`
+    * `remove_event_log_listener`
+    * `run_event_log_loop`
+    * `stop_event_log_loop`
 
 
-* 接口 `run_block_notify_loop` 最后两个参数的意义如下：
+* 接口 `run_block_notify_loop` 和 `run_event_log_loop` 最后两个参数的意义如下：
 
     * `sleep_seconds`：链上数据读取失败后，进入下一轮监听前要等待的时间（单位为秒）。
     * `max_retry_times`：链上数据读取失败后，最大重试次数，如果失败次数大于指定的值，将主动终止 loop。当值为 -1 时，表示无限循环。
@@ -504,6 +508,11 @@ let event_service = create_event_service(config_file_path).unwrap();
 * 接口 `run_block_notify_loop` 会一直运行下去，想要终止需调用 `stop_block_notify_loop` 接口，因此一般需要开启新的线程来运行 `run_block_notify_loop`，比如下面的例子：
 
   ```rs
+  use std::sync::Arc;
+  use std::thread;
+  use std::time::Duration;
+  use fisco_bcos_service::create_event_service;
+
   let event_service = create_event_service("./configs/config.json").unwrap();
   event_service.register_block_notify_listener(1, |v| println!("{:?}", v));
 
@@ -518,6 +527,51 @@ let event_service = create_event_service(config_file_path).unwrap();
   ```
 
 * 调用 `stop_block_notify_loop` 后，`run_block_notify_loop` 并不会立即终止，而是等到当前一轮监听返回后才终止。
+
+* 接口 `run_event_log_loop` 会一直运行下去，想要终止需调用 `stop_event_log_loop` 接口，因此一般需要开启新的线程来运行 `run_event_log_loop`，比如下面的例子：
+
+  ```rs
+  use std::sync::Arc;
+  use std::thread;
+  use std::time::Duration;
+  use fisco_bcos_service::create_event_service;
+  use fisco_bcos_service::event::event_log_param::EventLogParam;
+  use fisco_bcos_service::event::parse_event_log;
+  use fisco_bcos_service::event::topic::{from_event_signature, from_integer};
+
+  let event_log_param = EventLogParam::new();
+  event_log_param.add_address("0xf2df2e7c2a2dc9bd23523f4272e1de1d08d1e9a9");
+  event_log_param.add_topic(&from_event_signature("event2(string,int256)", false));
+  event_log_param.add_topic(&from_integer(0));
+
+  let event_service = create_event_service("./configs/config.json").unwrap();
+  event_service.register_event_log_listener(&event_log_param, |v| {
+     match v {
+         Ok(value) => {
+             let logs = parse_event_log(
+                 value, "event2",
+                 r#"{"anonymous":false,"inputs":[{"indexed":false,"name":"s","type":"string"},{"indexed":true,"name":"n","type":"int256"}],"name":"event2","type":"event"}"#,
+                 false,
+             ).unwrap();
+             println!("{:?}", logs);
+         },
+         _ => {}
+     }
+  });
+
+  let event_service_arc = Arc::new(event_service);
+  let event_log_param_arc = Arc::new(event_log_param);
+  let event_log_loop_service = event_service_arc.clone();
+  let event_log_loop_param = event_log_param_arc.clone();
+  let event_log_loop_handle = thread::spawn(move || {
+      event_log_loop_service.run_event_log_loop(&event_log_loop_param, 1, -1);
+  });
+  thread::sleep(Duration::from_millis((10 * 1000) as u64));
+  event_service_arc.clone().stop_event_log_loop(&event_log_param_arc.clone());
+  event_log_loop_handle.join().unwrap();
+  ```
+
+* 调用 `stop_event_log_loop` 后，`run_event_log_loop` 并不会立即终止，而是等到当前一轮监听返回后才终止。
 
 ## 十二、注意事项
 
