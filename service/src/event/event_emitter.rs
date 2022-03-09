@@ -1,5 +1,4 @@
-use std::cell::RefCell;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 pub struct Listener<'l, T> {
     name: String,
@@ -7,40 +6,47 @@ pub struct Listener<'l, T> {
 }
 
 pub struct EventEmitter<'l, T> {
-    pub listeners: RefCell<Vec<Listener<'l, T>>>,
+    pub listeners: Arc<RwLock<Vec<Listener<'l, T>>>>,
 }
 
 impl<'l, T> EventEmitter<'l, T> {
     pub fn new() -> EventEmitter<'l, T> {
-        EventEmitter { listeners: RefCell::from(vec![]) }
+        EventEmitter { listeners: Arc::new(RwLock::new(vec![])) }
     }
 
     pub fn on<F>(&self, name: &str, listener: F) where F: Fn(&T) + Send + Sync + 'l {
-        self.listeners.borrow_mut().push(Listener {
+        let listeners_lock = self.listeners.clone();
+        let mut listeners_write_lock = listeners_lock.write().unwrap();
+        listeners_write_lock.push(Listener {
             name: name.to_owned(),
             listener: Arc::new(listener),
         });
     }
 
     pub fn emit(&self, name: &str, value: &T) {
-        for listener in self.listeners.borrow().iter() {
+        let listeners_lock = self.listeners.clone();
+        let listeners_read_lock = listeners_lock.read().unwrap();
+        for listener in listeners_read_lock.iter() {
             if listener.name.eq(name) {
-                (listener.listener)(value);
+                let callback = listener.listener.clone();
+                callback(value);
             }
         }
     }
 
     pub fn remove(&self, name: &str) {
+        let listeners_lock = self.listeners.clone();
         let mut  removed_indexes: Vec<usize> = vec![];
-        for (index, listener) in self.listeners.borrow().iter().enumerate() {
+        let listeners_read_lock = listeners_lock.read().unwrap();
+        for (index, listener) in listeners_read_lock.iter().enumerate() {
             if listener.name.eq(name) {
                 removed_indexes.push(index);
             }
         }
-
-       let mut listeners =  self.listeners.borrow_mut();
+        drop(listeners_read_lock);
+        let mut listeners_write_lock = listeners_lock.write().unwrap();
         for removed_index in removed_indexes {
-            listeners.remove(removed_index);
+            listeners_write_lock.remove(removed_index);
         }
     }
 }

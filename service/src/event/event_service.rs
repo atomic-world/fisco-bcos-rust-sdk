@@ -42,7 +42,7 @@ impl<'l> EventService<'l> {
     }
 
     fn get_event_log_key(&self, event_log_param: &EventLogParam) -> String {
-        format!("_event_log_{:}", event_log_param.filter_id)
+        format!("_event_log_{:}", event_log_param.get_filter_id())
     }
 
     fn get_event_loop_running_status(&self, key: &str) -> bool {
@@ -194,13 +194,14 @@ impl<'l> EventService<'l> {
     ///
     pub fn run_event_log_loop(&self, event_log_param: &EventLogParam, sleep_seconds: u32, max_retry_times: i32) {
         let key = self.get_event_log_key(event_log_param);
+
         let params = json!({
-            "fromBlock": (*event_log_param.from_block.borrow()).clone(),
-            "toBlock": (*event_log_param.to_block.borrow()).clone(),
-            "addresses": (*event_log_param.addresses.borrow()).clone(),
-            "topics": (*event_log_param.topics.borrow()).clone(),
-            "groupID": self.config.group_id.to_string(),
-            "filterID": event_log_param.filter_id.clone(),
+            "fromBlock": event_log_param.get_from_block(),
+            "toBlock": event_log_param.get_to_block(),
+            "addresses": event_log_param.get_addresses(),
+            "topics": event_log_param.get_topics(),
+            "groupID": self.config.group_id,
+            "filterID": event_log_param.get_filter_id(),
         });
         let amop_data = pack_amop_message(
             &Vec::from(""),
