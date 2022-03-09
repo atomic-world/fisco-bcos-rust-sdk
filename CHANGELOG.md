@@ -1,3 +1,8 @@
+# 0.4.1 2022-03-09
+## Features
+
+* 移除 `EventLogParam#remove_topic`、`EventLogParam#remove_address` 及 `EventEmitter#remove` 中不必要的读锁逻辑。
+
 # 0.4.0 2022-03-09
 ## Features
 
