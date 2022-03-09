@@ -99,6 +99,7 @@ impl EventLogParam {
                 removed_indexes.push(index);
             }
         }
+        drop(topics_read_lock);
 
         let mut topics_write_lock = topics_lock.write().unwrap();
         for removed_index in removed_indexes {
