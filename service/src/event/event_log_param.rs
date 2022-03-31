@@ -1,5 +1,6 @@
-use uuid::Uuid;
 use std::sync::{Arc, RwLock};
+
+use uuid::Uuid;
 
 pub struct EventLogParam {
     filter_id: Arc<String>,
@@ -35,7 +36,6 @@ impl EventLogParam {
         let mut from_block_write_lock = from_block_lock.write().unwrap();
         *from_block_write_lock = from_block.to_owned();
     }
-
 
     pub fn get_to_block(&self) -> String {
         let to_block_lock = self.to_block.clone();

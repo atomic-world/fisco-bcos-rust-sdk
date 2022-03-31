@@ -1,15 +1,16 @@
-use thiserror::Error;
-use rlp::RlpStream;
-use uuid::Uuid;
 use std::convert::TryInto;
-use ethereum_types::{H512, H256, U256};
-use wedpr_l_utils::traits::{Hash, Signature};
-use wedpr_l_crypto_hash_sm3::WedprSm3;
-use wedpr_l_crypto_signature_sm2::WedprSm2p256v1;
-use wedpr_l_crypto_hash_keccak256::WedprKeccak256;
-use wedpr_l_crypto_signature_secp256k1::WedprSecp256k1Recover;
 
-use crate::account::{Account};
+use ethereum_types::{H256, H512, U256};
+use rlp::RlpStream;
+use thiserror::Error;
+use uuid::Uuid;
+use wedpr_l_crypto_hash_keccak256::WedprKeccak256;
+use wedpr_l_crypto_hash_sm3::WedprSm3;
+use wedpr_l_crypto_signature_secp256k1::WedprSecp256k1Recover;
+use wedpr_l_crypto_signature_sm2::WedprSm2p256v1;
+use wedpr_l_utils::traits::{Hash, Signature};
+
+use crate::account::Account;
 
 #[derive(Error, Debug)]
 pub enum TransactionError {
@@ -43,7 +44,7 @@ pub fn get_sign_transaction_data(
     let value = U256::from(0);
     let chain_id = U256::from(chain_id);
     let group_id = U256::from(group_id);
-    let extra_data= b"".to_vec();
+    let extra_data = b"".to_vec();
     let mut stream = RlpStream::new();
     stream.begin_list(10);
     stream.append(&nonce);
@@ -67,10 +68,14 @@ pub fn get_sign_transaction_data(
     let tx_hash = H256::from_slice(&msg_hash);
     let signature = if sm_crypto {
         let signer = WedprSm2p256v1::default();
-        signer.sign(&account.private_key, &tx_hash.as_bytes().to_vec()).unwrap()
+        signer
+            .sign(&account.private_key, &tx_hash.as_bytes().to_vec())
+            .unwrap()
     } else {
         let signer = WedprSecp256k1Recover::default();
-        signer.sign(&account.private_key, &tx_hash.as_bytes().to_vec()).unwrap()
+        signer
+            .sign(&account.private_key, &tx_hash.as_bytes().to_vec())
+            .unwrap()
     };
 
     let r = &signature[0..32];

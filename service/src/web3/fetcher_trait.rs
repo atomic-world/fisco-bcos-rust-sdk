@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use serde_json::Value as JSONValue;
+
 use crate::web3::service::ServiceError;
 
 pub fn parse_response(response: &JSONValue) -> Result<JSONValue, ServiceError> {
@@ -7,12 +8,10 @@ pub fn parse_response(response: &JSONValue) -> Result<JSONValue, ServiceError> {
     let error = &response["error"];
     match error.is_null() {
         true => Ok(result.clone()),
-        false => {
-            Err(ServiceError::FiscoBcosError {
-                code: error["code"].as_i64().unwrap() as i32,
-                message: error["message"].to_string(),
-            })
-        }
+        false => Err(ServiceError::FiscoBcosError {
+            code: error["code"].as_i64().unwrap() as i32,
+            message: error["message"].to_string(),
+        }),
     }
 }
 

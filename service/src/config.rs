@@ -1,5 +1,9 @@
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
+
 use serde::Deserialize;
-use std::{fs, path::{Path, PathBuf}};
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct Node {
@@ -56,7 +60,10 @@ pub struct Config {
 impl Config {
     fn get_file_real_path(&self, base_path: &Path, file_path: &str) -> String {
         if file_path.len() > 0 {
-            fs::canonicalize(base_path.join(file_path)).unwrap().display().to_string()
+            fs::canonicalize(base_path.join(file_path))
+                .unwrap()
+                .display()
+                .to_string()
         } else {
             String::default()
         }

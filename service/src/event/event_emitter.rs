@@ -11,10 +11,15 @@ pub struct EventEmitter<'l, T> {
 
 impl<'l, T> EventEmitter<'l, T> {
     pub fn new() -> EventEmitter<'l, T> {
-        EventEmitter { listeners: Arc::new(RwLock::new(vec![])) }
+        EventEmitter {
+            listeners: Arc::new(RwLock::new(vec![])),
+        }
     }
 
-    pub fn on<F>(&self, name: &str, listener: F) where F: Fn(&T) + Send + Sync + 'l {
+    pub fn on<F>(&self, name: &str, listener: F)
+    where
+        F: Fn(&T) + Send + Sync + 'l,
+    {
         let listeners_lock = self.listeners.clone();
         let mut listeners_write_lock = listeners_lock.write().unwrap();
         listeners_write_lock.push(Listener {
@@ -38,7 +43,7 @@ impl<'l, T> EventEmitter<'l, T> {
         let listeners_lock = self.listeners.clone();
         let mut listeners_write_lock = listeners_lock.write().unwrap();
 
-        let mut  removed_indexes: Vec<usize> = vec![];
+        let mut removed_indexes: Vec<usize> = vec![];
         for (index, listener) in listeners_write_lock.iter().enumerate() {
             if listener.name.eq(name) {
                 removed_indexes.push(index);

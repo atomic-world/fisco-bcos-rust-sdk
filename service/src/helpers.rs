@@ -9,9 +9,10 @@ pub fn parse_json_string(value: &JSONValue) -> String {
 
 pub fn parse_json_string_array(value: &JSONValue) -> Vec<String> {
     match value.as_array() {
-        Some(list) => list.into_iter().map(
-            |item| parse_json_string(item)
-        ).collect(),
+        Some(list) => list
+            .into_iter()
+            .map(|item| parse_json_string(item))
+            .collect(),
         None => vec![],
     }
 }

@@ -1,25 +1,19 @@
-pub mod web3;
-pub mod account;
 pub mod abi;
-pub mod transaction;
-pub mod helpers;
-pub mod tassl;
-pub mod config;
-pub mod precompiled;
-pub mod event;
+pub mod account;
 pub mod channel;
-pub use ethabi;
-pub use serde_json;
-
+pub mod config;
+pub mod event;
+pub mod helpers;
+pub mod precompiled;
+pub mod tassl;
+pub mod transaction;
+pub mod web3;
 pub use config::create_config_with_file;
-pub use web3::service::create_service_with_config as create_web3_service_with_config;
-
-use web3::service::{
-    Service as Web3Service,
-    ServiceError as Web3ServiceError,
-};
-
+pub use ethabi;
 use event::event_service::EventService;
+pub use serde_json;
+pub use web3::service::create_service_with_config as create_web3_service_with_config;
+use web3::service::{Service as Web3Service, ServiceError as Web3ServiceError};
 
 ///
 /// 根据配置文件创建 web3 service 服务实例。
@@ -52,8 +46,7 @@ use event::event_service::EventService;
 ///    "timeout_seconds": 10
 /// }
 /// ```
-///
-pub fn create_web3_service(config_file_path: &str) -> Result<Web3Service, Web3ServiceError>  {
+pub fn create_web3_service(config_file_path: &str) -> Result<Web3Service, Web3ServiceError> {
     let config = create_config_with_file(config_file_path)?;
     create_web3_service_with_config(&config)
 }
@@ -89,7 +82,6 @@ pub fn create_web3_service(config_file_path: &str) -> Result<Web3Service, Web3Se
 ///    "timeout_seconds": 10
 /// }
 /// ```
-///
 pub fn create_event_service(config_file_path: &str) -> Result<EventService, std::io::Error> {
     let config = create_config_with_file(&config_file_path)?;
     Ok(EventService::new(&config))

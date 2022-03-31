@@ -1,13 +1,16 @@
-use serde_json::Value as JSONValue;
 use async_trait::async_trait;
-use hyper::{Body, Client};
-use hyper::http::{Request, Method};
+use hyper::{
+    http::{Method, Request},
+    Body, Client,
+};
+use serde_json::Value as JSONValue;
+
 use crate::web3::{
+    fetcher_trait::{parse_response, FetcherTrait},
     service::ServiceError,
-    fetcher_trait::{FetcherTrait, parse_response},
 };
 
-pub struct RPCFetcher  {
+pub struct RPCFetcher {
     host: String,
     port: i32,
 }

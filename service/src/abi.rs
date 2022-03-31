@@ -1,20 +1,16 @@
-use std::collections::HashMap;
-use std::fs;
-use thiserror::Error;
-use wedpr_l_utils::traits::Hash;
-use wedpr_l_crypto_hash_sm3::WedprSm3;
+use std::{collections::HashMap, fs};
+
 use ethabi::{
-    Contract, Function, Event,
-    Log, RawLog,
-    Param, LogParam, EventParam,
-    param_type::{ParamType, Writer},
+    decode as eth_decode, encode as eth_encode,
     ethereum_types::H256,
+    param_type::{ParamType, Writer},
     token::{LenientTokenizer, Token, Tokenizer},
-    Error as ETHError,
+    Contract, Error as ETHError, Event, EventParam, Function, Log, LogParam, Param, RawLog,
     Result as ETHResult,
-    decode as eth_decode,
-    encode as eth_encode,
 };
+use thiserror::Error;
+use wedpr_l_crypto_hash_sm3::WedprSm3;
+use wedpr_l_utils::traits::Hash;
 
 use crate::config::Contract as ContractConfig;
 
@@ -30,9 +26,7 @@ pub enum ABIError {
     FromHexError(#[from] hex::FromHexError),
 
     #[error("abi custom error")]
-    CustomError {
-        message: String,
-    }
+    CustomError { message: String },
 }
 
 pub struct ABI {
@@ -45,21 +39,34 @@ pub struct ABI {
 impl ABI {
     fn get_load_contract_error(&self) -> ABIError {
         ABIError::CustomError {
-            message: format!("Can't load the contract:{:?}, please compile it first", self.contract_name)
+            message: format!(
+                "Can't load the contract:{:?}, please compile it first",
+                self.contract_name
+            ),
         }
     }
 
     fn get_load_abi_bin_error(&self) -> ABIError {
         ABIError::CustomError {
-            message: format!("Can't load abi bin for the contract:{:?}, please set it first", self.contract_name)
+            message: format!(
+                "Can't load abi bin for the contract:{:?}, please set it first",
+                self.contract_name
+            ),
         }
     }
 
-    fn parse_tokens(&self, inputs: &Vec<Param>, params: &Vec<String>) -> Result<Vec<Token>, ABIError> {
-        let params: Vec<(ParamType, &str)> = inputs.iter()
+    fn parse_tokens(
+        &self,
+        inputs: &Vec<Param>,
+        params: &Vec<String>,
+    ) -> Result<Vec<Token>, ABIError> {
+        let params: Vec<(ParamType, &str)> = inputs
+            .iter()
             .map(|param| param.kind.clone())
-            .zip(params.iter().map(|v| v as &str)).collect();
-        let tokens = params.iter()
+            .zip(params.iter().map(|v| v as &str))
+            .collect();
+        let tokens = params
+            .iter()
             .map(|&(ref param, value)| {
                 if *param == ParamType::Address {
                     LenientTokenizer::tokenize(param, value.to_owned().trim_start_matches("0x"))
@@ -72,7 +79,11 @@ impl ABI {
     }
 
     fn sm_short_signature(&self, name: &str, params: &[ParamType]) -> Vec<u8> {
-        let types = params.iter().map(Writer::write).collect::<Vec<String>>().join(",");
+        let types = params
+            .iter()
+            .map(Writer::write)
+            .collect::<Vec<String>>()
+            .join(",");
         let data: Vec<u8> = From::from(format!("{}({})", name, types).as_str());
         let sm3_hash = WedprSm3::default();
         sm3_hash.hash(&data)[..4].to_vec()
@@ -89,7 +100,12 @@ impl ABI {
     }
 
     fn event_indexed_params(&self, event: &Event, indexed: bool) -> Vec<EventParam> {
-        event.inputs.iter().filter(|p| p.indexed == indexed).cloned().collect()
+        event
+            .inputs
+            .iter()
+            .filter(|p| p.indexed == indexed)
+            .cloned()
+            .collect()
     }
 
     fn convert_topic_param_type(&self, kind: &ParamType) -> ParamType {
@@ -104,10 +120,15 @@ impl ABI {
     }
 
     fn event_sm_signature(&self, event: &Event) -> H256 {
-        let types = event.inputs.iter().map(|p| Writer::write(&p.kind)).collect::<Vec<String>>().join(",");
+        let types = event
+            .inputs
+            .iter()
+            .map(|p| Writer::write(&p.kind))
+            .collect::<Vec<String>>()
+            .join(",");
         let data: Vec<u8> = From::from(format!("{}({})", event.name, types).as_str());
         let sm3_hash = WedprSm3::default();
-        let hash= sm3_hash.hash(&data)[..32].to_vec();
+        let hash = sm3_hash.hash(&data)[..32].to_vec();
         H256::from_slice(&hash)
     }
 
@@ -126,23 +147,46 @@ impl ABI {
             }
             1
         };
-        let topic_types =
-            topic_params.iter().map(|p| self.convert_topic_param_type(&p.kind)).collect::<Vec<ParamType>>();
-        let flat_topics = topics.into_iter().skip(to_skip).flat_map(|t| t.as_ref().to_vec()).collect::<Vec<u8>>();
+        let topic_types = topic_params
+            .iter()
+            .map(|p| self.convert_topic_param_type(&p.kind))
+            .collect::<Vec<ParamType>>();
+        let flat_topics = topics
+            .into_iter()
+            .skip(to_skip)
+            .flat_map(|t| t.as_ref().to_vec())
+            .collect::<Vec<u8>>();
         let topic_tokens = eth_decode(&topic_types, &flat_topics)?;
         if topic_tokens.len() != topics_len - to_skip {
             return Err(ETHError::InvalidData);
         }
-        let topics_named_tokens = topic_params.into_iter().map(|p| p.name).zip(topic_tokens.into_iter());
-        let data_types = data_params.iter().map(|p| p.kind.clone()).collect::<Vec<ParamType>>();
-        let data_tokens = eth_decode(&data_types, &data)?;
-        let data_named_tokens = data_params.into_iter().map(|p| p.name).zip(data_tokens.into_iter());
-        let named_tokens = topics_named_tokens.chain(data_named_tokens).collect::<HashMap<String, Token>>();
-        let decoded_params = event.inputs
+        let topics_named_tokens = topic_params
+            .into_iter()
+            .map(|p| p.name)
+            .zip(topic_tokens.into_iter());
+        let data_types = data_params
             .iter()
-            .map(|p| LogParam { name: p.name.clone(), value: named_tokens[&p.name].clone() })
+            .map(|p| p.kind.clone())
+            .collect::<Vec<ParamType>>();
+        let data_tokens = eth_decode(&data_types, &data)?;
+        let data_named_tokens = data_params
+            .into_iter()
+            .map(|p| p.name)
+            .zip(data_tokens.into_iter());
+        let named_tokens = topics_named_tokens
+            .chain(data_named_tokens)
+            .collect::<HashMap<String, Token>>();
+        let decoded_params = event
+            .inputs
+            .iter()
+            .map(|p| LogParam {
+                name: p.name.clone(),
+                value: named_tokens[&p.name].clone(),
+            })
             .collect();
-        let result = Log { params: decoded_params };
+        let result = Log {
+            params: decoded_params,
+        };
         Ok(result)
     }
 
@@ -172,20 +216,22 @@ impl ABI {
         contract_name: &str,
         sm_crypto: bool,
     ) -> Result<ABI, ABIError> {
-        Ok(
-            ABI {
-                sm_crypto,
-                contract_name: contract_name.to_owned(),
-                abi_bin: abi_bin.clone(),
-                contract: match abi {
-                    None => None,
-                    Some(abi) => Some(Contract::load(abi.as_slice())?)
-                },
-            }
-        )
+        Ok(ABI {
+            sm_crypto,
+            contract_name: contract_name.to_owned(),
+            abi_bin: abi_bin.clone(),
+            contract: match abi {
+                None => None,
+                Some(abi) => Some(Contract::load(abi.as_slice())?),
+            },
+        })
     }
 
-    pub fn parse_function_tokens(&self, function_name: &str, params: &Vec<String>) -> Result<Vec<Token>, ABIError> {
+    pub fn parse_function_tokens(
+        &self,
+        function_name: &str,
+        params: &Vec<String>,
+    ) -> Result<Vec<Token>, ABIError> {
         match self.contract.as_ref() {
             None => Err(self.get_load_contract_error()),
             Some(contract) => {
@@ -198,34 +244,38 @@ impl ABI {
     pub fn parse_constructor_tokens(&self, params: &Vec<String>) -> Result<Vec<Token>, ABIError> {
         match self.contract.as_ref() {
             None => Err(self.get_load_contract_error()),
-            Some(contract) => {
-                match contract.constructor.as_ref() {
-                    Some(constructor) => Ok(self.parse_tokens(&constructor.inputs, params)?),
-                    None => Ok(vec![]),
-                }
-            }
+            Some(contract) => match contract.constructor.as_ref() {
+                Some(constructor) => Ok(self.parse_tokens(&constructor.inputs, params)?),
+                None => Ok(vec![]),
+            },
         }
     }
 
     pub fn encode_constructor_input(&self, tokens: &Vec<Token>) -> Result<Vec<u8>, ABIError> {
         match self.contract.as_ref() {
             None => Err(self.get_load_contract_error()),
-            Some(contract) => {
-                match self.abi_bin.as_ref() {
-                    None => Err(self.get_load_abi_bin_error()),
-                    Some(abi_bin) => {
-                        let data = match contract.constructor.as_ref() {
-                            Some(constructor) => constructor.encode_input(abi_bin.clone(), &tokens)?,
-                            None => abi_bin.clone().into_iter().chain(eth_encode(&tokens)).collect(),
-                        };
-                        Ok(hex::decode(data)?)
-                    },
+            Some(contract) => match self.abi_bin.as_ref() {
+                None => Err(self.get_load_abi_bin_error()),
+                Some(abi_bin) => {
+                    let data = match contract.constructor.as_ref() {
+                        Some(constructor) => constructor.encode_input(abi_bin.clone(), &tokens)?,
+                        None => abi_bin
+                            .clone()
+                            .into_iter()
+                            .chain(eth_encode(&tokens))
+                            .collect(),
+                    };
+                    Ok(hex::decode(data)?)
                 }
-            }
+            },
         }
     }
 
-    pub fn encode_function_input(&self, function_name: &str, tokens: &Vec<Token>) -> Result<Vec<u8>, ABIError> {
+    pub fn encode_function_input(
+        &self,
+        function_name: &str,
+        tokens: &Vec<Token>,
+    ) -> Result<Vec<u8>, ABIError> {
         match self.contract.as_ref() {
             None => Err(self.get_load_contract_error()),
             Some(contract) => {
@@ -239,7 +289,11 @@ impl ABI {
         }
     }
 
-    pub fn decode_output(&self, function_name: &str, value: &str) -> Result<Option<Vec<Token>>, ABIError> {
+    pub fn decode_output(
+        &self,
+        function_name: &str,
+        value: &str,
+    ) -> Result<Option<Vec<Token>>, ABIError> {
         if value.eq("0x") {
             return Ok(None);
         }
@@ -252,7 +306,9 @@ impl ABI {
                     let data = hex::decode(output.to_owned().as_bytes())?;
                     let params: Vec<ParamType> = vec![ParamType::String];
                     let tokens = eth_decode(&params, &data)?;
-                    return Err(ABIError::CustomError { message: tokens[0].to_string() });
+                    return Err(ABIError::CustomError {
+                        message: tokens[0].to_string(),
+                    });
                 }
                 let data = hex::decode(value.to_owned().trim_start_matches("0x").as_bytes())?;
                 Ok(Some(function.decode_output(&data)?))

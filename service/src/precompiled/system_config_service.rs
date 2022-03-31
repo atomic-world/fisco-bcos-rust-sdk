@@ -1,5 +1,7 @@
-use crate::web3::service::Service as Web3Service;
-use crate::precompiled::precompiled_service::{PrecompiledServiceError, send_transaction};
+use crate::{
+    precompiled::precompiled_service::{send_transaction, PrecompiledServiceError},
+    web3::service::Service as Web3Service,
+};
 
 const ADDRESS: &str = "0x0000000000000000000000000000000000001000";
 const ABI_CONTENT: &str = r#"[{"constant":false,"inputs":[{"name":"key","type":"string"},{"name":"value","type":"string"}],"name":"setValueByKey","outputs":[{"name":"","type":"int256"}],"payable":false,"stateMutability":"nonpayable","type":"function"}]"#;
@@ -10,12 +12,14 @@ pub struct SystemConfigService<'l> {
 
 impl<'l> SystemConfigService<'l> {
     pub fn new(web3_service: &'l Web3Service) -> SystemConfigService<'l> {
-        SystemConfigService {
-            web3_service
-        }
+        SystemConfigService { web3_service }
     }
 
-    pub async fn set_value_by_key(&self, key: &str, value: &str) -> Result<i32, PrecompiledServiceError> {
+    pub async fn set_value_by_key(
+        &self,
+        key: &str,
+        value: &str,
+    ) -> Result<i32, PrecompiledServiceError> {
         let params = vec![key.to_owned(), value.to_owned()];
         send_transaction(
             self.web3_service,
@@ -24,6 +28,7 @@ impl<'l> SystemConfigService<'l> {
             ABI_CONTENT,
             "setValueByKey",
             &params,
-        ).await
+        )
+        .await
     }
 }

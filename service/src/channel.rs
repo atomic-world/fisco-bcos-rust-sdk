@@ -1,11 +1,13 @@
-use uuid::Uuid;
-use thiserror::Error;
 use std::convert::TryInto;
-use serde_json::{Value as JSONValue, json};
 
-use crate::config::Config;
-use crate::tassl::{TASSL, TASSLError};
+use serde_json::{json, Value as JSONValue};
+use thiserror::Error;
+use uuid::Uuid;
 
+use crate::{
+    config::Config,
+    tassl::{TASSLError, TASSL},
+};
 
 #[derive(Error, Debug)]
 pub enum ChannelError {
@@ -46,7 +48,7 @@ impl MessageType {
 }
 
 pub fn pack_channel_message(data: &Vec<u8>, message_type: MessageType) -> Vec<u8> {
-    let mut buffer:Vec<u8> = Vec::new();
+    let mut buffer: Vec<u8> = Vec::new();
     buffer.append(&mut Vec::from(((data.len() + 42) as u32).to_be_bytes()));
     buffer.append(&mut Vec::from(message_type.value().to_be_bytes()));
     buffer.append(&mut Uuid::new_v4().to_string().replace("-", "").into_bytes());
@@ -56,7 +58,7 @@ pub fn pack_channel_message(data: &Vec<u8>, message_type: MessageType) -> Vec<u8
 }
 
 pub fn pack_amop_message(topic: &Vec<u8>, data: &Vec<u8>) -> Vec<u8> {
-    let mut buffer:Vec<u8> = vec!();
+    let mut buffer: Vec<u8> = vec![];
     buffer.append(&mut Vec::from((1 + topic.len() as u8).to_be_bytes()));
     buffer.append(&mut topic.clone());
     buffer.append(&mut data.clone());
@@ -78,7 +80,7 @@ pub fn open_tassl(config: &Config) -> Result<TASSL, TASSLError> {
 }
 
 pub fn channel_read(tassl: &TASSL) -> Result<JSONValue, ChannelError> {
-    let mut buffer:Vec<u8> = vec![0; 4];
+    let mut buffer: Vec<u8> = vec![0; 4];
     tassl.read(&mut buffer[0..])?;
     let buffer_size = u32::from_be_bytes(buffer.clone().as_slice().try_into()?) as usize;
     buffer.append(&mut vec![0; buffer_size - 4]);
@@ -90,7 +92,9 @@ pub fn channel_read(tassl: &TASSL) -> Result<JSONValue, ChannelError> {
     } else if message_type == MessageType::ClientRegisterEventLog.value() {
         parse_client_register_event_log(data)
     } else {
-        Ok(serde_json::from_str(std::str::from_utf8(&data)?.trim_end_matches("\n"))?)
+        Ok(serde_json::from_str(
+            std::str::from_utf8(&data)?.trim_end_matches("\n"),
+        )?)
     }
 }
 
@@ -111,5 +115,7 @@ fn parse_block_notify(buffer: Vec<u8>) -> JSONValue {
 
 fn parse_client_register_event_log(buffer: Vec<u8>) -> Result<JSONValue, ChannelError> {
     let topic_len = u8::from_be_bytes(buffer[0].to_be_bytes()) as usize;
-    Ok(serde_json::from_str(std::str::from_utf8(&buffer[topic_len..])?.trim_end_matches("\n"))?)
+    Ok(serde_json::from_str(
+        std::str::from_utf8(&buffer[topic_len..])?.trim_end_matches("\n"),
+    )?)
 }

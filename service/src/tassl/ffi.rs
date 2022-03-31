@@ -1,11 +1,12 @@
 #![allow(non_snake_case, non_camel_case_types)]
 
-use libc::*;
 use std::ptr;
+
 use cfg_if::cfg_if;
+use libc::*;
 
 pub(crate) type tls_session_ticket_ext_cb_fn =
-Option<unsafe extern "C" fn(*mut SSL, *const c_uchar, c_int, *mut c_void) -> c_int>;
+    Option<unsafe extern "C" fn(*mut SSL, *const c_uchar, c_int, *mut c_void) -> c_int>;
 
 pub(crate) type tls_session_secret_cb_fn = Option<
     unsafe extern "C" fn(
@@ -19,10 +20,10 @@ pub(crate) type tls_session_secret_cb_fn = Option<
 >;
 
 pub(crate) type GEN_SESSION_CB =
-Option<unsafe extern "C" fn(*const SSL, *mut c_uchar, *mut c_uint) -> c_int>;
+    Option<unsafe extern "C" fn(*const SSL, *mut c_uchar, *mut c_uint) -> c_int>;
 
 pub(crate) type bio_info_cb =
-Option<unsafe extern "C" fn(*mut BIO, c_int, *const c_char, c_int, c_long, c_long)>;
+    Option<unsafe extern "C" fn(*mut BIO, c_int, *const c_char, c_int, c_long, c_long)>;
 
 pub(crate) enum ASN1_OBJECT {}
 
@@ -477,7 +478,6 @@ cfg_if! {
     }
 }
 
-
 cfg_if! {
     if #[cfg(ossl110)] {
         pub(crate) enum X509 {}
@@ -690,13 +690,37 @@ extern "C" {
     pub(crate) fn SSL_CTX_new(method: *const SSL_METHOD) -> *mut SSL_CTX;
     pub(crate) fn SSL_CTX_set_timeout(ctx: *mut SSL_CTX, t: c_long) -> c_long;
     pub(crate) fn SSL_CTX_free(ctx: *mut SSL_CTX);
-    pub(crate) fn SSL_CTX_ctrl(ctx: *mut SSL_CTX, cmd: c_int, larg: c_long, parg: *mut c_void) -> c_long;
+    pub(crate) fn SSL_CTX_ctrl(
+        ctx: *mut SSL_CTX,
+        cmd: c_int,
+        larg: c_long,
+        parg: *mut c_void,
+    ) -> c_long;
 
-    pub(crate) fn SSL_CTX_load_verify_locations(ctx: *mut SSL_CTX, ca_file: *const c_char, ca_path: *const c_char) -> c_int;
-    pub(crate) fn SSL_CTX_use_certificate_chain_file(ctx: *mut SSL_CTX, file: *const c_char) -> c_int;
-    pub(crate) fn SSL_CTX_use_PrivateKey_file(ctx: *mut SSL_CTX, file: *const c_char, file_type: c_int) -> c_int;
-    pub(crate) fn SSL_CTX_use_certificate_file(ctx: *mut SSL_CTX, file: *const c_char, file_type: c_int) -> c_int;
-    pub(crate) fn SSL_CTX_use_enc_PrivateKey_file(ctx: *mut SSL_CTX, file: *const c_char, file_type: c_int) -> c_int;
+    pub(crate) fn SSL_CTX_load_verify_locations(
+        ctx: *mut SSL_CTX,
+        ca_file: *const c_char,
+        ca_path: *const c_char,
+    ) -> c_int;
+    pub(crate) fn SSL_CTX_use_certificate_chain_file(
+        ctx: *mut SSL_CTX,
+        file: *const c_char,
+    ) -> c_int;
+    pub(crate) fn SSL_CTX_use_PrivateKey_file(
+        ctx: *mut SSL_CTX,
+        file: *const c_char,
+        file_type: c_int,
+    ) -> c_int;
+    pub(crate) fn SSL_CTX_use_certificate_file(
+        ctx: *mut SSL_CTX,
+        file: *const c_char,
+        file_type: c_int,
+    ) -> c_int;
+    pub(crate) fn SSL_CTX_use_enc_PrivateKey_file(
+        ctx: *mut SSL_CTX,
+        file: *const c_char,
+        file_type: c_int,
+    ) -> c_int;
     pub(crate) fn SSL_CTX_check_private_key(ctx: *mut SSL_CTX) -> c_int;
     pub(crate) fn SSL_CTX_check_enc_private_key(ctx: *mut SSL_CTX) -> c_int;
 

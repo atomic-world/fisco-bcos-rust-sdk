@@ -1,12 +1,12 @@
 use std::collections::HashMap;
+
 use serde_json::Value as JSONValue;
 
-use crate::web3::service::Service as Web3Service;
-use crate::precompiled::precompiled_service::{
-    PrecompiledServiceError,
-    call,
-    send_transaction,
-    parse_string_token_to_json,
+use crate::{
+    precompiled::precompiled_service::{
+        call, parse_string_token_to_json, send_transaction, PrecompiledServiceError,
+    },
+    web3::service::Service as Web3Service,
 };
 
 const TABLE_FACTORY_ADDRESS: &str = "0x0000000000000000000000000000000000001001";
@@ -44,32 +44,32 @@ impl Condition {
                 let mut condition: HashMap<String, String> = HashMap::new();
                 condition.insert("eq".to_owned(), value.to_owned());
                 condition
-            },
+            }
             ConditionOperator::NotEq => {
                 let mut condition: HashMap<String, String> = HashMap::new();
                 condition.insert("ne".to_owned(), value.to_owned());
                 condition
-            },
+            }
             ConditionOperator::Gt => {
                 let mut condition: HashMap<String, String> = HashMap::new();
                 condition.insert("gt".to_owned(), value.to_owned());
                 condition
-            },
+            }
             ConditionOperator::Lt => {
                 let mut condition: HashMap<String, String> = HashMap::new();
                 condition.insert("lt".to_owned(), value.to_owned());
                 condition
-            },
+            }
             ConditionOperator::GtEq => {
                 let mut condition: HashMap<String, String> = HashMap::new();
                 condition.insert("ge".to_owned(), value.to_owned());
                 condition
-            },
+            }
             ConditionOperator::LtEq => {
                 let mut condition: HashMap<String, String> = HashMap::new();
                 condition.insert("le".to_owned(), value.to_owned());
                 condition
-            },
+            }
         };
         self.remove_condition(key);
         self.conditions.insert(key.to_owned(), condition);
@@ -97,9 +97,7 @@ pub struct TableCRUDService<'l> {
 
 impl<'l> TableCRUDService<'l> {
     pub fn new(web3_service: &'l Web3Service) -> TableCRUDService<'l> {
-        TableCRUDService {
-            web3_service
-        }
+        TableCRUDService { web3_service }
     }
 
     pub async fn create_table(
@@ -109,26 +107,34 @@ impl<'l> TableCRUDService<'l> {
         fields: &Vec<String>,
     ) -> Result<i32, PrecompiledServiceError> {
         if fields.len() == 0 {
-            return  Err(PrecompiledServiceError::CustomError {
+            return Err(PrecompiledServiceError::CustomError {
                 message: String::from("The size of the fields must be larger than 0"),
             });
         }
 
         if fields.contains(&key_field.to_owned()) {
             return Err(PrecompiledServiceError::CustomError {
-                message: format!("The fields should not include the key field {:?}", key_field),
+                message: format!(
+                    "The fields should not include the key field {:?}",
+                    key_field
+                ),
             });
         }
 
-        let params = vec![table_name.to_owned(), key_field.to_owned(), fields.join(",")];
+        let params = vec![
+            table_name.to_owned(),
+            key_field.to_owned(),
+            fields.join(","),
+        ];
         send_transaction(
             self.web3_service,
             "TableFactory",
             TABLE_FACTORY_ADDRESS,
             TABLE_FACTORY_ABI_CONTENT,
             "createTable",
-            &params
-        ).await
+            &params,
+        )
+        .await
     }
 
     pub async fn insert(
@@ -149,8 +155,9 @@ impl<'l> TableCRUDService<'l> {
             CRUD_ADDRESS,
             CRUD_ABI_CONTENT,
             "insert",
-            &params
-        ).await
+            &params,
+        )
+        .await
     }
 
     pub async fn remove(
@@ -171,8 +178,9 @@ impl<'l> TableCRUDService<'l> {
             CRUD_ADDRESS,
             CRUD_ABI_CONTENT,
             "remove",
-            &params
-        ).await
+            &params,
+        )
+        .await
     }
 
     pub async fn select(
@@ -193,13 +201,14 @@ impl<'l> TableCRUDService<'l> {
             CRUD_ADDRESS,
             CRUD_ABI_CONTENT,
             "select",
-            &params
-        ).await?;
+            &params,
+        )
+        .await?;
         Ok(
             match parse_string_token_to_json(&response.output)?.as_array() {
                 Some(list) => list.into_iter().map(|item| item.clone()).collect(),
                 None => vec![],
-            }
+            },
         )
     }
 
@@ -223,11 +232,15 @@ impl<'l> TableCRUDService<'l> {
             CRUD_ADDRESS,
             CRUD_ABI_CONTENT,
             "update",
-            &params
-        ).await
+            &params,
+        )
+        .await
     }
 
-    pub async fn desc(&self, table_name: &str) -> Result<(String, Vec<String>), PrecompiledServiceError> {
+    pub async fn desc(
+        &self,
+        table_name: &str,
+    ) -> Result<(String, Vec<String>), PrecompiledServiceError> {
         let params = vec![table_name.to_owned()];
         let response = call(
             self.web3_service,
@@ -235,13 +248,13 @@ impl<'l> TableCRUDService<'l> {
             CRUD_ADDRESS,
             CRUD_ABI_CONTENT,
             "desc",
-            &params
-        ).await?;
+            &params,
+        )
+        .await?;
         let tokens = response.output.unwrap();
-        let key_field = tokens[0].clone()
-            .into_string()
-            .unwrap_or(String::from(""));
-        let value_fields: Vec<String> = tokens[1].clone()
+        let key_field = tokens[0].clone().into_string().unwrap_or(String::from(""));
+        let value_fields: Vec<String> = tokens[1]
+            .clone()
             .into_string()
             .unwrap_or(String::from(""))
             .split(",")

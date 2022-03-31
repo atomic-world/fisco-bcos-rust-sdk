@@ -1,9 +1,10 @@
-use thiserror::Error;
 use std::{fs, path::Path};
+
 use keccak_hash::keccak;
+use thiserror::Error;
 use wedpr_l_crypto_hash_sm3::WedprSm3;
-use wedpr_l_libsm::sm2::signature::SigCtx;
 use wedpr_l_crypto_signature_secp256k1::WedprSecp256k1Recover;
+use wedpr_l_libsm::sm2::signature::SigCtx;
 use wedpr_l_utils::traits::Hash;
 
 pub struct Account {
@@ -24,9 +25,7 @@ pub enum AccountError {
     FromHexError(#[from] hex::FromHexError),
 
     #[error("account custom error")]
-    CustomError {
-        message: String,
-    }
+    CustomError { message: String },
 }
 
 fn create_sm_account(private_key: &Vec<u8>) -> Result<Account, AccountError> {
@@ -40,7 +39,11 @@ fn create_sm_account(private_key: &Vec<u8>) -> Result<Account, AccountError> {
     let sm3_hash = WedprSm3::default();
     let public_key_hash = sm3_hash.hash(&public_key);
     let address = public_key_hash[12..].to_vec();
-    Ok(Account { private_key: private_key.clone(), public_key, address })
+    Ok(Account {
+        private_key: private_key.clone(),
+        public_key,
+        address,
+    })
 }
 
 fn create_ecdsa_account(private_key: &Vec<u8>) -> Result<Account, AccountError> {
@@ -51,11 +54,16 @@ fn create_ecdsa_account(private_key: &Vec<u8>) -> Result<Account, AccountError> 
     }
     let public_key_hash = Vec::from(keccak(&public_key).as_bytes());
     let address = public_key_hash[12..].to_vec();
-    Ok(Account { private_key: private_key.clone(), public_key, address })
+    Ok(Account {
+        private_key: private_key.clone(),
+        public_key,
+        address,
+    })
 }
 
 const EC_PRIVATE_KEY_PREFIX: &str = "30740201010420";
-const PRIVATE_KEY_PREFIX_SM: &str = "308187020100301306072a8648ce3d020106082a811ccf5501822d046d306b0201010420";
+const PRIVATE_KEY_PREFIX_SM: &str =
+    "308187020100301306072a8648ce3d020106082a811ccf5501822d046d306b0201010420";
 const PRIVATE_KEY_PREFIX_LEN: usize = 66;
 
 fn get_private_key(pem_file_path: &str, sm_crypto: bool) -> Result<Vec<u8>, AccountError> {
@@ -63,10 +71,12 @@ fn get_private_key(pem_file_path: &str, sm_crypto: bool) -> Result<Vec<u8>, Acco
     let private_key_hex = hex::encode(&private_key);
     if sm_crypto {
         if private_key_hex.starts_with(PRIVATE_KEY_PREFIX_SM) {
-            let prefix_len= PRIVATE_KEY_PREFIX_SM.len();
+            let prefix_len = PRIVATE_KEY_PREFIX_SM.len();
             Ok(hex::decode(&private_key_hex[prefix_len..prefix_len + 64])?)
         } else {
-            Err(AccountError::CustomError { message: "expected `EC PRIVATE KEY` or `PRIVATE KEY`".to_owned() })
+            Err(AccountError::CustomError {
+                message: "expected `EC PRIVATE KEY` or `PRIVATE KEY`".to_owned(),
+            })
         }
     } else {
         let prefix_len = if private_key_hex.starts_with(EC_PRIVATE_KEY_PREFIX) {
@@ -78,7 +88,10 @@ fn get_private_key(pem_file_path: &str, sm_crypto: bool) -> Result<Vec<u8>, Acco
     }
 }
 
-pub fn create_account_from_pem(pem_file_path: &str, sm_crypto: bool) -> Result<Account, AccountError> {
+pub fn create_account_from_pem(
+    pem_file_path: &str,
+    sm_crypto: bool,
+) -> Result<Account, AccountError> {
     let private_key = get_private_key(pem_file_path, sm_crypto)?;
     if sm_crypto {
         create_sm_account(&private_key)

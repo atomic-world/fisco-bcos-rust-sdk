@@ -1,12 +1,10 @@
 use serde_json::Value as JSONValue;
 
-use crate::web3::service::Service as Web3Service;
-use crate::precompiled::precompiled_service::{
-    PrecompiledServiceError,
-    call,
-    send_transaction,
-    parse_output,
-    parse_string_token_to_json,
+use crate::{
+    precompiled::precompiled_service::{
+        call, parse_output, parse_string_token_to_json, send_transaction, PrecompiledServiceError,
+    },
+    web3::service::Service as Web3Service,
 };
 
 const ADDRESS: &str = "0x0000000000000000000000000000000000001008";
@@ -18,12 +16,13 @@ pub struct ChainGovernanceService<'l> {
 
 impl<'l> ChainGovernanceService<'l> {
     pub fn new(web3_service: &'l Web3Service) -> ChainGovernanceService<'l> {
-        ChainGovernanceService {
-            web3_service
-        }
+        ChainGovernanceService { web3_service }
     }
 
-    pub async fn grant_committee_member(&self, user_address: &str) -> Result<i32, PrecompiledServiceError> {
+    pub async fn grant_committee_member(
+        &self,
+        user_address: &str,
+    ) -> Result<i32, PrecompiledServiceError> {
         let params = vec![user_address.to_owned()];
         send_transaction(
             self.web3_service,
@@ -31,11 +30,15 @@ impl<'l> ChainGovernanceService<'l> {
             ADDRESS,
             ABI_CONTENT,
             "grantCommitteeMember",
-            &params
-        ).await
+            &params,
+        )
+        .await
     }
 
-    pub async fn revoke_committee_member(&self, user_address: &str) -> Result<i32, PrecompiledServiceError> {
+    pub async fn revoke_committee_member(
+        &self,
+        user_address: &str,
+    ) -> Result<i32, PrecompiledServiceError> {
         let params = vec![user_address.to_owned()];
         send_transaction(
             self.web3_service,
@@ -43,8 +46,9 @@ impl<'l> ChainGovernanceService<'l> {
             ADDRESS,
             ABI_CONTENT,
             "revokeCommitteeMember",
-            &params
-        ).await
+            &params,
+        )
+        .await
     }
 
     pub async fn list_committee_members(&self) -> Result<JSONValue, PrecompiledServiceError> {
@@ -55,12 +59,16 @@ impl<'l> ChainGovernanceService<'l> {
             ADDRESS,
             ABI_CONTENT,
             "listCommitteeMembers",
-            &params
-        ).await?;
+            &params,
+        )
+        .await?;
         parse_string_token_to_json(&response.output)
     }
 
-    pub async fn query_committee_member_weight(&self, user_address: &str) -> Result<(bool, i32), PrecompiledServiceError> {
+    pub async fn query_committee_member_weight(
+        &self,
+        user_address: &str,
+    ) -> Result<(bool, i32), PrecompiledServiceError> {
         let params = vec![user_address.to_owned()];
         let response = call(
             self.web3_service,
@@ -68,15 +76,20 @@ impl<'l> ChainGovernanceService<'l> {
             ADDRESS,
             ABI_CONTENT,
             "queryCommitteeMemberWeight",
-            &params
-        ).await?;
+            &params,
+        )
+        .await?;
         let tokens = response.output.unwrap();
         let status = tokens[0].clone().into_bool().unwrap();
         let code = parse_output(&tokens[1].clone().into_int().unwrap())?;
-        Ok((status , code))
+        Ok((status, code))
     }
 
-    pub async fn update_committee_member_weight(&self, user_address: &str, weight: i32) -> Result<i32, PrecompiledServiceError> {
+    pub async fn update_committee_member_weight(
+        &self,
+        user_address: &str,
+        weight: i32,
+    ) -> Result<i32, PrecompiledServiceError> {
         let params = vec![user_address.to_owned(), weight.to_string()];
         send_transaction(
             self.web3_service,
@@ -84,11 +97,15 @@ impl<'l> ChainGovernanceService<'l> {
             ADDRESS,
             ABI_CONTENT,
             "updateCommitteeMemberWeight",
-            &params
-        ).await
+            &params,
+        )
+        .await
     }
 
-    pub async fn query_votes_of_member(&self, user_address: &str) -> Result<JSONValue, PrecompiledServiceError> {
+    pub async fn query_votes_of_member(
+        &self,
+        user_address: &str,
+    ) -> Result<JSONValue, PrecompiledServiceError> {
         let params = vec![user_address.to_owned()];
         let response = call(
             self.web3_service,
@@ -96,8 +113,9 @@ impl<'l> ChainGovernanceService<'l> {
             ADDRESS,
             ABI_CONTENT,
             "queryVotesOfMember",
-            &params
-        ).await?;
+            &params,
+        )
+        .await?;
         parse_string_token_to_json(&response.output)
     }
 
@@ -109,8 +127,9 @@ impl<'l> ChainGovernanceService<'l> {
             ADDRESS,
             ABI_CONTENT,
             "queryVotesOfThreshold",
-            &params
-        ).await?;
+            &params,
+        )
+        .await?;
         parse_string_token_to_json(&response.output)
     }
 
@@ -122,8 +141,9 @@ impl<'l> ChainGovernanceService<'l> {
             ADDRESS,
             ABI_CONTENT,
             "updateThreshold",
-            &params
-        ).await
+            &params,
+        )
+        .await
     }
 
     pub async fn query_threshold(&self) -> Result<i32, PrecompiledServiceError> {
@@ -134,8 +154,9 @@ impl<'l> ChainGovernanceService<'l> {
             ADDRESS,
             ABI_CONTENT,
             "queryThreshold",
-            &params
-        ).await?;
+            &params,
+        )
+        .await?;
         let tokens = response.output.unwrap();
         parse_output(&tokens[0].clone().into_int().unwrap())
     }
@@ -148,11 +169,15 @@ impl<'l> ChainGovernanceService<'l> {
             ADDRESS,
             ABI_CONTENT,
             "grantOperator",
-            &params
-        ).await
+            &params,
+        )
+        .await
     }
 
-    pub async fn revoke_operator(&self, user_address: &str) -> Result<i32, PrecompiledServiceError> {
+    pub async fn revoke_operator(
+        &self,
+        user_address: &str,
+    ) -> Result<i32, PrecompiledServiceError> {
         let params = vec![user_address.to_owned()];
         send_transaction(
             self.web3_service,
@@ -160,8 +185,9 @@ impl<'l> ChainGovernanceService<'l> {
             ADDRESS,
             ABI_CONTENT,
             "revokeOperator",
-            &params
-        ).await
+            &params,
+        )
+        .await
     }
 
     pub async fn list_operators(&self) -> Result<JSONValue, PrecompiledServiceError> {
@@ -172,8 +198,9 @@ impl<'l> ChainGovernanceService<'l> {
             ADDRESS,
             ABI_CONTENT,
             "listOperators",
-            &params
-        ).await?;
+            &params,
+        )
+        .await?;
         parse_string_token_to_json(&response.output)
     }
 
@@ -185,8 +212,9 @@ impl<'l> ChainGovernanceService<'l> {
             ADDRESS,
             ABI_CONTENT,
             "freezeAccount",
-            &params
-        ).await
+            &params,
+        )
+        .await
     }
 
     pub async fn unfreeze_account(&self, address: &str) -> Result<i32, PrecompiledServiceError> {
@@ -197,11 +225,15 @@ impl<'l> ChainGovernanceService<'l> {
             ADDRESS,
             ABI_CONTENT,
             "unfreezeAccount",
-            &params
-        ).await
+            &params,
+        )
+        .await
     }
 
-    pub async fn get_account_status(&self, address: &str) -> Result<String, PrecompiledServiceError> {
+    pub async fn get_account_status(
+        &self,
+        address: &str,
+    ) -> Result<String, PrecompiledServiceError> {
         let params = vec![address.to_owned()];
         let response = call(
             self.web3_service,
@@ -209,8 +241,9 @@ impl<'l> ChainGovernanceService<'l> {
             ADDRESS,
             ABI_CONTENT,
             "getAccountStatus",
-            &params
-        ).await?;
+            &params,
+        )
+        .await?;
         let tokens = response.output.unwrap();
         Ok(tokens[0].clone().into_string().unwrap_or(String::from("")))
     }

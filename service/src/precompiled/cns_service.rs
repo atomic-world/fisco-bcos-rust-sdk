@@ -1,12 +1,11 @@
 use serde_json::Value as JSONValue;
 
-use crate::web3::service::Service as Web3Service;
-use crate::precompiled::precompiled_service::{
-    PrecompiledServiceError,
-    call,
-    send_transaction,
-    parse_string_token_to_json,
-    parse_address_token_to_string,
+use crate::{
+    precompiled::precompiled_service::{
+        call, parse_address_token_to_string, parse_string_token_to_json, send_transaction,
+        PrecompiledServiceError,
+    },
+    web3::service::Service as Web3Service,
 };
 
 const ADDRESS: &str = "0x0000000000000000000000000000000000001004";
@@ -18,21 +17,31 @@ pub struct CNSService<'l> {
 
 impl<'l> CNSService<'l> {
     pub fn new(web3_service: &'l Web3Service) -> CNSService<'l> {
-        CNSService {
-            web3_service
-        }
+        CNSService { web3_service }
     }
 
-    pub async fn insert(&self, name: &str, version: &str, address: &str, abi: &str) -> Result<i32, PrecompiledServiceError> {
-        let params = vec![name.to_owned(), version.to_owned(), address.to_owned(), abi.to_owned()];
+    pub async fn insert(
+        &self,
+        name: &str,
+        version: &str,
+        address: &str,
+        abi: &str,
+    ) -> Result<i32, PrecompiledServiceError> {
+        let params = vec![
+            name.to_owned(),
+            version.to_owned(),
+            address.to_owned(),
+            abi.to_owned(),
+        ];
         send_transaction(
             self.web3_service,
             "CNSPrecompiled",
             ADDRESS,
             ABI_CONTENT,
             "insert",
-            &params
-        ).await
+            &params,
+        )
+        .await
     }
 
     pub async fn select_by_name(&self, name: &str) -> Result<JSONValue, PrecompiledServiceError> {
@@ -43,12 +52,17 @@ impl<'l> CNSService<'l> {
             ADDRESS,
             ABI_CONTENT,
             "selectByName",
-            &params
-        ).await?;
+            &params,
+        )
+        .await?;
         parse_string_token_to_json(&response.output)
     }
 
-    pub async fn select_by_name_and_version(&self, name: &str, version: &str) -> Result<JSONValue, PrecompiledServiceError> {
+    pub async fn select_by_name_and_version(
+        &self,
+        name: &str,
+        version: &str,
+    ) -> Result<JSONValue, PrecompiledServiceError> {
         let params = vec![name.to_owned(), version.to_owned()];
         let response = call(
             self.web3_service,
@@ -56,12 +70,17 @@ impl<'l> CNSService<'l> {
             ADDRESS,
             ABI_CONTENT,
             "selectByNameAndVersion",
-            &params
-        ).await?;
+            &params,
+        )
+        .await?;
         parse_string_token_to_json(&response.output)
     }
 
-    pub async fn get_contract_address(&self, name: &str, version: &str) -> Result<String, PrecompiledServiceError> {
+    pub async fn get_contract_address(
+        &self,
+        name: &str,
+        version: &str,
+    ) -> Result<String, PrecompiledServiceError> {
         let params = vec![name.to_owned(), version.to_owned()];
         let response = call(
             self.web3_service,
@@ -69,8 +88,9 @@ impl<'l> CNSService<'l> {
             ADDRESS,
             ABI_CONTENT,
             "getContractAddress",
-            &params
-        ).await?;
+            &params,
+        )
+        .await?;
         parse_address_token_to_string(&response.output)
     }
 }

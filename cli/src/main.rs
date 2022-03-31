@@ -1,7 +1,6 @@
 mod cli;
 
-use rustyline::error::ReadlineError;
-use rustyline::Editor;
+use rustyline::{error::ReadlineError, Editor};
 
 use crate::cli::Cli;
 
@@ -11,7 +10,8 @@ fn print_help() {
     println!("Type 'help' for help.");
     println!("Type 'CTRL-C' or 'CTRL-D' to quit console.");
     println!("Visit https://github.com/kkawakam/rustyline#actions to get more actions.\n");
-    println!( r#"________ ______  ______   ______   ______       _______   ______   ______   ______
+    println!(
+        r#"________ ______  ______   ______   ______       _______   ______   ______   ______
 |        |      \/      \ /      \ /      \     |       \ /      \ /      \ /      \
 | $$$$$$$$\$$$$$|  $$$$$$|  $$$$$$|  $$$$$$\    | $$$$$$$|  $$$$$$|  $$$$$$|  $$$$$$\
 | $$__     | $$ | $$___\$| $$   \$| $$  | $$    | $$__/ $| $$   \$| $$  | $| $$___\$$
@@ -19,7 +19,8 @@ fn print_help() {
 | $$$$$    | $$  _\$$$$$$| $$   __| $$  | $$    | $$$$$$$| $$   __| $$  | $$_\$$$$$$\
 | $$      _| $$_|  \__| $| $$__/  | $$__/ $$    | $$__/ $| $$__/  | $$__/ $|  \__| $$
 | $$     |   $$ \\$$    $$\$$    $$\$$    $$    | $$    $$\$$    $$\$$    $$\$$    $$
- \$$      \$$$$$$ \$$$$$$  \$$$$$$  \$$$$$$      \$$$$$$$  \$$$$$$  \$$$$$$  \$$$$$$"#);
+ \$$      \$$$$$$ \$$$$$$  \$$$$$$  \$$$$$$      \$$$$$$$  \$$$$$$  \$$$$$$  \$$$$$$"#
+    );
     println!("\n=============================================================================================\n");
 }
 
@@ -38,10 +39,8 @@ async fn main() {
                 let command = line.as_str();
                 rl.add_history_entry(command);
                 cli.run_command(command).await;
-            },
-            Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => {
-                break
-            },
+            }
+            Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => break,
             Err(err) => {
                 println!("Error: {:?}", err);
             }
@@ -49,6 +48,7 @@ async fn main() {
     }
 
     if let Some(path) = home::home_dir() {
-        rl.save_history(path.join(".fisco_bcos_history").as_path()).unwrap();
+        rl.save_history(path.join(".fisco_bcos_history").as_path())
+            .unwrap();
     }
 }

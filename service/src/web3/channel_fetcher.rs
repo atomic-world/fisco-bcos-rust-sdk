@@ -1,12 +1,14 @@
-use serde_json::Value as JSONValue;
 use async_trait::async_trait;
+use serde_json::Value as JSONValue;
 
-use crate::config::Config;
-use crate::web3::{
-    service::ServiceError,
-    fetcher_trait::{FetcherTrait, parse_response},
+use crate::{
+    channel::{channel_read, open_tassl, pack_channel_message, MessageType},
+    config::Config,
+    web3::{
+        fetcher_trait::{parse_response, FetcherTrait},
+        service::ServiceError,
+    },
 };
-use crate::channel::{MessageType, open_tassl, channel_read, pack_channel_message};
 
 pub struct ChannelFetcher {
     config: Config,
@@ -14,7 +16,9 @@ pub struct ChannelFetcher {
 
 impl ChannelFetcher {
     pub fn new(config: &Config) -> ChannelFetcher {
-        ChannelFetcher { config: config.clone() }
+        ChannelFetcher {
+            config: config.clone(),
+        }
     }
 }
 
@@ -22,11 +26,11 @@ impl ChannelFetcher {
 impl FetcherTrait for ChannelFetcher {
     async fn fetch(&self, params: &JSONValue) -> Result<JSONValue, ServiceError> {
         let tassl = open_tassl(&self.config)?;
-        let request_data = pack_channel_message(&serde_json::to_vec(&params)?, MessageType::RpcRequest);
+        let request_data =
+            pack_channel_message(&serde_json::to_vec(&params)?, MessageType::RpcRequest);
         tassl.write(&request_data)?;
         let response = channel_read(&tassl)?;
         tassl.close();
         parse_response(&response)
     }
 }
-

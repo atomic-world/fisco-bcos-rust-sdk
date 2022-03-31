@@ -11,7 +11,6 @@ fn try_load_tassl_from_env(target: &str) -> Option<PathBuf> {
     let lib_path = env::var_os("TASSL_LIB_PATH");
     if lib_path.is_none() {
         return None;
-
     }
     let lib_path = PathBuf::from(lib_path.unwrap());
     if !lib_path.exists() {
