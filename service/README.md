@@ -58,10 +58,10 @@ fisco-bcos-service = ">=0.4, <1"
 ```json
 {
     "service_type": "rpc",
-    "node": {
-        "host": "127.0.0.1",
-        "port": 8545
-    },
+    "peers": [
+        "127.0.0.1:20200",
+        "127.0.0.1:20201"
+    ],
     "account": "./accounts/alice.pem",
     "contract":  {
         "solc": "./bin/solc-0.4.25",
@@ -86,10 +86,7 @@ fisco-bcos-service = ">=0.4, <1"
 
 * `service_type`：服务类型，可用值为：`rpc` 或 `channel`。
 
-* `node`：服务节点信息，包含以下属性：
-
-    * `host`：服务节点主机地址。
-    * `port`：服务节点端口号。
+* `peers`：服务节点列表。
 
 * `account`：用户证书文件路径（仅支持 `pem` 格式）。
 

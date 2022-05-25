@@ -11,15 +11,13 @@ use crate::web3::{
 };
 
 pub struct RPCFetcher {
-    host: String,
-    port: i32,
+    peer: String,
 }
 
 impl RPCFetcher {
-    pub fn new(host: &str, port: i32) -> RPCFetcher {
+    pub fn new(peer: &str) -> RPCFetcher {
         RPCFetcher {
-            host: host.to_owned(),
-            port,
+            peer: peer.to_owned(),
         }
     }
 }
@@ -30,7 +28,7 @@ impl FetcherTrait for RPCFetcher {
         let request_body = serde_json::to_string(&params)?;
         let request = Request::builder()
             .method(Method::POST)
-            .uri(format!("http://{}:{}", self.host, self.port))
+            .uri(format!("http://{:}", self.peer))
             .body(Body::from(request_body))?;
         let client = Client::new();
         let response = client.request(request).await?;

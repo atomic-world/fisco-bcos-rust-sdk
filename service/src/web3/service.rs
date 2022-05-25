@@ -630,7 +630,7 @@ impl Service {
 
 pub fn create_service_with_config(config: &Config) -> Result<Service, ServiceError> {
     if config.service_type.eq("rpc") {
-        let fetcher = RPCFetcher::new(&config.node.host, config.node.port);
+        let fetcher = RPCFetcher::new(&config.get_random_peer());
         Service::new(&config, Box::new(fetcher))
     } else {
         let fetcher = ChannelFetcher::new(&config);

@@ -203,13 +203,13 @@ impl TASSL {
         }
     }
 
-    pub fn connect(&self, host: &str, port: i32) -> Result<(), TASSLError> {
+    pub fn connect(&self, peer: &str) -> Result<(), TASSLError> {
         unsafe {
             if self.ssl.borrow().is_none() {
                 *self.ssl.borrow_mut() = Some(SSL_new(self.ctx.borrow().unwrap()));
             }
             let ssl = self.ssl.borrow().unwrap();
-            let connect = BIO_new_connect(CString::new(format!("{}:{}", host, port))?.as_ptr());
+            let connect = BIO_new_connect(CString::new(peer)?.as_ptr());
             SSL_set_bio(ssl, connect, connect);
             SSL_set_connect_state(ssl);
             let start = Instant::now();

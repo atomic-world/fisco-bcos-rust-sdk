@@ -3,13 +3,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use rand::Rng;
 use serde::Deserialize;
-
-#[derive(Deserialize, Clone, Debug)]
-pub struct Node {
-    pub host: String,
-    pub port: i32,
-}
 
 #[derive(Deserialize, Clone, Default, Debug)]
 pub struct Authentication {
@@ -46,7 +41,7 @@ impl Contract {
 #[derive(Deserialize, Clone, Debug)]
 pub struct Config {
     pub service_type: String,
-    pub node: Node,
+    pub peers: Vec<String>,
     pub contract: Contract,
     pub account: String,
     #[serde(default)]
@@ -83,6 +78,12 @@ impl Config {
             enc_key: self.get_file_real_path(base_path, &self.authentication.enc_key),
             enc_cert: self.get_file_real_path(base_path, &self.authentication.enc_cert),
         };
+    }
+
+    pub fn get_random_peer(&self) -> String {
+        let mut rng = rand::thread_rng();
+        let index = rng.gen_range(0..self.peers.len());
+        self.peers[index].clone()
     }
 }
 

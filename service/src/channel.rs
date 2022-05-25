@@ -75,7 +75,7 @@ pub fn open_tassl(config: &Config) -> Result<TASSL, TASSLError> {
         &config.authentication.enc_key,
         &config.authentication.enc_cert,
     )?;
-    tassl.connect(&config.node.host, config.node.port)?;
+    tassl.connect(&config.get_random_peer())?;
     Ok(tassl)
 }
 

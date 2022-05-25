@@ -23,10 +23,10 @@ use web3::service::{Service as Web3Service, ServiceError as Web3ServiceError};
 /// ```json
 /// {
 ///    "service_type": "rpc",
-///    "node": {
-///        "host": "127.0.0.1",
-///        "port": 8545
-///    },
+///    "peers": [
+///        "127.0.0.1:20200",
+///        "127.0.0.1:20201"
+///    ],
 ///    "account": "./accounts/alice.pem",
 ///    "contract":  {
 ///        "solc": "./bin/solc-0.4.25",
@@ -59,10 +59,10 @@ pub fn create_web3_service(config_file_path: &str) -> Result<Web3Service, Web3Se
 /// ```json
 /// {
 ///    "service_type": "rpc",
-///    "node": {
-///        "host": "127.0.0.1",
-///        "port": 8545
-///    },
+///    "peers": [
+///        "127.0.0.1:20200",
+///        "127.0.0.1:20201"
+///    ],
 ///    "account": "./accounts/alice.pem",
 ///    "contract":  {
 ///        "solc": "./bin/solc-0.4.25",
