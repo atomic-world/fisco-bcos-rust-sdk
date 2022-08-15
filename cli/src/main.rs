@@ -27,7 +27,7 @@ fn print_help() {
 #[tokio::main]
 async fn main() {
     let mut cli = Cli::new();
-    let mut rl = Editor::<()>::new();
+    let mut rl = Editor::<()>::new().unwrap();
     if let Some(path) = home::home_dir() {
         let _ = rl.load_history(path.join(".fisco_bcos_history").as_path());
     }
