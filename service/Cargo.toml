@@ -38,7 +38,7 @@ pad = "0.1.6"
 fancy-regex = "0.10.0"
 regex = "1.5.5"
 hyper = { version = "0.14", features = ["full"] }
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1.8.4", features = ["full"] }
 uuid = { version = "0.8", features = ["serde", "v4"] }
 
 [build-dependencies]
